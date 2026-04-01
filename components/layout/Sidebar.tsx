@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       />
       
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-50 h-full w-64 bg-white shadow-xl lg:sticky lg:top-0 lg:z-0">
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl lg:sticky lg:top-0 lg:z-0">
         <div className="flex h-full flex-col">
           {/* Header with close button */}
           <div className="flex items-center justify-between border-b border-gray-200 p-4">

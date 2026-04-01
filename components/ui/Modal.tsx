@@ -16,6 +16,7 @@ interface ModalProps {
   cancelText?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isLoading?: boolean;
+  confirmDisabled?: boolean; // Add this prop
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -30,6 +31,7 @@ export const Modal: React.FC<ModalProps> = ({
   cancelText = 'Cancel',
   size = 'md',
   isLoading = false,
+  confirmDisabled = false, // Add default value
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -75,6 +77,7 @@ export const Modal: React.FC<ModalProps> = ({
             <button
               onClick={onClose}
               className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              disabled={isLoading}
             >
               <X className="h-5 w-5" />
             </button>
@@ -83,12 +86,21 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="px-6 py-4">{children}</div>
         <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
           {showCancelButton && (
-            <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button 
+              variant="outline" 
+              onClick={onClose} 
+              disabled={isLoading}
+            >
               {cancelText}
             </Button>
           )}
           {showConfirmButton && onConfirm && (
-            <Button variant="primary" onClick={onConfirm} loading={isLoading}>
+            <Button 
+              variant="primary" 
+              onClick={onConfirm} 
+              loading={isLoading}
+              disabled={confirmDisabled || isLoading}
+            >
               {confirmText}
             </Button>
           )}

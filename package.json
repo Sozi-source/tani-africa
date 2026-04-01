@@ -4,17 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "cross-env NEXT_DISABLE_TURBOPACK=1 next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rd /s /q .next 2>nul || rm -rf .next"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "axios": "^1.14.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.7.0",
-    "next": "16.2.1",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^0.469.0",
+    "next": "15.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.72.0",
@@ -28,9 +31,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.1",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "15.2.4",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5"
+    "typescript": "^5.0.0"
   }
 }

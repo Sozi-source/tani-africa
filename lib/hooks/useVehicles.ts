@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { vehiclesAPI } from '@/lib/api';
 import { Vehicle, CreateVehicleData } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
 interface UseVehiclesReturn {
@@ -19,24 +20,30 @@ export const useVehicles = (userId?: string): UseVehiclesReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  // userId stored in a ref so fetchVehicles stays stable
+  const userIdRef = useRef(userId);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
+
   const fetchVehicles = useCallback(async () => {
     try {
       setLoading(true);
-      let response;
-      if (userId) {
-        response = await vehiclesAPI.getByUser(userId);
-      } else {
-        response = await vehiclesAPI.getAll();
-      }
-      setVehicles(response.data || []);
+      const response = userIdRef.current
+        ? await vehiclesAPI.getByUser(userIdRef.current)
+        : await vehiclesAPI.getAll();
+      setVehicles(Array.isArray(response) ? response : []);
       setError(null);
     } catch (err: any) {
-      setError(err.message);
-      toast.error(err.message);
+      if (err?.response?.status !== 401) {
+        setError(err.message);
+        toast.error(err?.response?.data?.message || err.message || 'Failed to fetch vehicles');
+      }
+      setVehicles([]);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []); // ← stable, uses ref internally
 
   const createVehicle = useCallback(async (vehicleData: CreateVehicleData) => {
     try {
@@ -44,7 +51,8 @@ export const useVehicles = (userId?: string): UseVehiclesReturn => {
       toast.success('Vehicle added successfully');
       await fetchVehicles();
     } catch (err: any) {
-      toast.error(err.message);
+      const message = err?.response?.data?.message || err.message || 'Failed to add vehicle';
+      toast.error(message);
       throw err;
     }
   }, [fetchVehicles]);
@@ -55,18 +63,26 @@ export const useVehicles = (userId?: string): UseVehiclesReturn => {
       toast.success('Vehicle deleted successfully');
       await fetchVehicles();
     } catch (err: any) {
-      toast.error(err.message);
+      const message = err?.response?.data?.message || err.message || 'Failed to delete vehicle';
+      toast.error(message);
       throw err;
     }
   }, [fetchVehicles]);
 
   useEffect(() => {
-    fetchVehicles();
-  }, [fetchVehicles]);
+    if (authLoading) return;
+
+    if (isAuthenticated) {
+      fetchVehicles();
+    } else {
+      setVehicles([]);
+      setLoading(false);
+    }
+  }, [authLoading, isAuthenticated]); // ← fetchVehicles intentionally omitted
 
   return {
     vehicles,
-    loading,
+    loading,  // ← just local loading
     error,
     fetchVehicles,
     createVehicle,

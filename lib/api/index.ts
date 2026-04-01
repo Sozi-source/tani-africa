@@ -4,3 +4,4 @@ export { vehiclesAPI } from './vehicles';
 export { bidsAPI } from './bids';
 export { usersAPI } from './users';
 export { default as apiClient } from './client';
+export { adminAPI } from './admin';

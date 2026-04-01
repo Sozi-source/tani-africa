@@ -2,15 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI } from '@/lib/api';
-import { User, LoginCredentials, RegisterData } from '@/types';
+import { User, LoginCredentials, RegisterData, LoginResponse } from '@/types';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<any>;
-  register: (userData: RegisterData) => Promise<any>;
+  login: (credentials: LoginCredentials) => Promise<LoginResponse>;
+  register: (userData: RegisterData) => Promise<User>;
   logout: () => void;
   isAuthenticated: boolean;
   isClient: boolean;
@@ -33,43 +33,60 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  // Initialize with null for SSR - will hydrate on client
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
+  // Restore session from localStorage on mount (client-side only)
   useEffect(() => {
-    const storedUser = authAPI.getCurrentUser();
-    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setMounted(true);
     
-    if (storedUser && storedToken) {
-      setUser(storedUser);
-      setToken(storedToken);
+    // Only run on client
+    if (typeof window !== 'undefined') {
+      const storedUser = authAPI.getCurrentUser();
+      const storedToken = authAPI.getToken();
+
+      if (storedUser && storedToken) {
+        setUser(storedUser);
+        setToken(storedToken);
+      }
     }
     setLoading(false);
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
     try {
       const response = await authAPI.login(credentials);
-      const { accessToken, user: userData } = response.data;
-      authAPI.setAuthData(accessToken, userData);
+      const { accessToken, refreshToken, user: userData } = response;
+
+      authAPI.setAuthData(accessToken, refreshToken, userData);
       setToken(accessToken);
       setUser(userData);
       toast.success('Login successful!');
       return response;
     } catch (error: any) {
-      toast.error(error.message || 'Login failed');
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Login failed. Please check your credentials.';
+      toast.error(message);
       throw error;
     }
   };
 
-  const register = async (userData: RegisterData) => {
+  const register = async (userData: RegisterData): Promise<User> => {
     try {
       const response = await authAPI.register(userData);
-      toast.success('Registration successful! Please login.');
+      toast.success('Registration successful! Please sign in.');
       return response;
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed');
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Registration failed. Please try again.';
+      toast.error(message);
       throw error;
     }
   };
@@ -84,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     user,
     token,
-    loading,
+    loading: loading || !mounted, // Show loading until mounted
     login,
     register,
     logout,
@@ -93,6 +110,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isDriver: user?.role === 'DRIVER',
     isAdmin: user?.role === 'ADMIN',
   };
+
+  // During SSR, render children with default state
+  // This prevents hydration mismatches
+  if (!mounted) {
+    return (
+      <AuthContext.Provider value={value}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

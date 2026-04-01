@@ -10,7 +10,7 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 60000,
 });
 
-// Request interceptor
+// Request interceptor — attaches Bearer token from localStorage
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     if (typeof window !== 'undefined') {
@@ -24,16 +24,16 @@ apiClient.interceptors.request.use(
   (error: unknown): Promise<unknown> => Promise.reject(error)
 );
 
-// Response interceptor
+// Response interceptor — unwraps response.data so callers get data directly
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Return the data directly
     return response.data;
   },
   (error: unknown): Promise<unknown> => {
     const err = error as any;
     if (err.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       window.location.href = '/auth/login';
     }

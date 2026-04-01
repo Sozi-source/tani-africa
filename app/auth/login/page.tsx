@@ -1,20 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardBody } from '@/components/ui/Card';
-import { Truck, Mail, Lock, ArrowRight, User, Phone } from 'lucide-react';
+import { Truck, Mail, Lock, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Pre-filled test credentials
   const [formData, setFormData] = useState({
     email: 'quicktest@example.com',
     password: 'password123',
@@ -52,7 +50,6 @@ export default function LoginPage() {
     }
   };
 
-  // Quick test buttons
   const setTestCredentials = (email: string, password: string) => {
     setFormData({ email, password });
   };
@@ -70,31 +67,12 @@ export default function LoginPage() {
               <p className="mt-2 text-gray-600">Sign in to your account</p>
             </div>
 
-            {/* Test Credentials Buttons */}
             <div className="mb-6 space-y-2">
-              <p className="text-sm text-gray-500 text-center">Quick Test Accounts:</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                <button
-                  type="button"
-                  onClick={() => setTestCredentials('quicktest@example.com', 'password123')}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full transition-colors"
-                >
-                  Test User
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTestCredentials('admin@example.com', 'Admin123!')}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full transition-colors"
-                >
-                  Admin User
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTestCredentials('driver@example.com', 'Driver123!')}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full transition-colors"
-                >
-                  Driver User
-                </button>
+              <p className="text-center text-sm text-gray-500">Quick Test Accounts:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <button type="button" onClick={() => setTestCredentials('quicktest@example.com', 'password123')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Test User</button>
+                <button type="button" onClick={() => setTestCredentials('admin@example.com', 'Admin123!')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Admin User</button>
+                <button type="button" onClick={() => setTestCredentials('driver@example.com', 'Driver123!')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Driver User</button>
               </div>
             </div>
 
@@ -128,9 +106,7 @@ export default function LoginPage() {
                   <input type="checkbox" className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
                   <span className="text-sm text-gray-600">Remember me</span>
                 </label>
-                <Link href="/auth/forgot-password" className="text-sm text-primary-600 hover:underline">
-                  Forgot password?
-                </Link>
+                <Link href="/auth/forgot-password" className="text-sm text-primary-600 hover:underline">Forgot password?</Link>
               </div>
 
               <Button type="submit" variant="primary" fullWidth loading={isLoading}>
@@ -142,17 +118,12 @@ export default function LoginPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
-                <Link href="/auth/register" className="font-medium text-primary-600 hover:underline">
-                  Sign up
-                </Link>
+                <Link href="/auth/register" className="font-medium text-primary-600 hover:underline">Sign up</Link>
               </p>
             </div>
 
-            {/* Test Info */}
-            <div className="mt-6 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 text-center">
-                Test credentials are pre-filled. Click "Sign In" to login.
-              </p>
+            <div className="mt-6 rounded-lg bg-gray-50 p-3">
+              <p className="text-center text-xs text-gray-500">Test credentials are pre-filled. Click "Sign In" to login.</p>
             </div>
           </CardBody>
         </Card>
