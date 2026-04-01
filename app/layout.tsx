@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
-import { ClientLayout } from './client-layout'; // ← direct import, no dynamic
+import { ClientLayout } from './client-layout'; // ← add this
 
 const inter = Inter({
   subsets: ['latin'],
@@ -42,13 +42,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
+    <html 
+      lang="en" 
       className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
       data-scroll-behavior="smooth"
     >
       <body className="font-sans antialiased">
-        <ClientLayout>{children}</ClientLayout>
+        <ClientLayout>{children}</ClientLayout> {/* ← wrap children */}
       </body>
     </html>
   );

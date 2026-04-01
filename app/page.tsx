@@ -1,5 +1,4 @@
 'use client';
-
 import { useAuth } from '@/lib/hooks/useAuth';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useRouter } from 'next/navigation';
@@ -7,7 +6,23 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
-import { Truck, Package, Clock, Shield, ArrowRight, CheckCircle, Users, Award, Headphones, MapPin, Star } from 'lucide-react';
+import { 
+  Truck, 
+  Package, 
+  Clock, 
+  Shield, 
+  ArrowRight, 
+  CheckCircle, 
+  Users, 
+  Award, 
+  Headphones, 
+  MapPin, 
+  Star, 
+  TrendingUp, 
+  Zap,
+  Target,
+  Sparkles
+} from 'lucide-react';
 
 export default function HomePage() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -16,7 +31,6 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (isAuthenticated && user) {
-        // Redirect to role-specific dashboard
         if (user.role === 'CLIENT') {
           router.push('/dashboard');
         } else if (user.role === 'DRIVER') {
@@ -36,262 +50,263 @@ export default function HomePage() {
     );
   }
 
-  // Show landing page for non-authenticated users
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-600 py-20 text-white">
-          <div className="absolute inset-0 bg-black/20" />
+        {/* Hero Section with Truck Image */}
+        <section className="relative min-h-[90vh] overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #f97316 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+          </div>
+          
+          {/* Decorative Elements */}
+          <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-gradient-to-br from-amber-200 to-orange-200 blur-3xl opacity-30" />
+          <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-gradient-to-br from-rose-200 to-amber-200 blur-3xl opacity-30" />
+          
           <div className="container-custom relative z-10">
-            <div className="mx-auto max-w-4xl text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="rounded-full bg-white/20 p-3">
-                  <Truck className="h-12 w-12" />
+            <div className="flex flex-col-reverse lg:flex-row lg:items-center lg:justify-between gap-12 py-12 lg:py-20">
+              {/* Left Content */}
+              <div className="flex-1 text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg mb-6">
+                  <Sparkles className="h-4 w-4" />
+                  Kenya's Leading Logistics Platform
+                </div>
+                <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
+                  Connect with{' '}
+                  <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                    Trusted Drivers
+                  </span>
+                  <br />
+                  Across Kenya
+                </h1>
+                <p className="mt-6 text-lg text-gray-600 lg:text-xl">
+                  Post your cargo, receive competitive bids, and track your shipment in real-time. 
+                  The smart way to transport goods across Kenya.
+                </p>
+                
+                {/* Stats Row */}
+                <div className="mt-8 flex flex-wrap justify-center lg:justify-start gap-6">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-amber-600">500+</p>
+                    <p className="text-sm text-gray-500">Active Drivers</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-amber-600">1,000+</p>
+                    <p className="text-sm text-gray-500">Jobs Completed</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-amber-600">98%</p>
+                    <p className="text-sm text-gray-500">Satisfaction</p>
+                  </div>
+                </div>
+                
+                {/* CTA Buttons */}
+                <div className="mt-8 flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
+                  <Link href="/auth/register">
+                    <Button size="lg" className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transition-all">
+                      Get Started Free
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/jobs">
+                    <Button size="lg" variant="outline" className="border-2 border-amber-500 text-amber-600 hover:bg-amber-50">
+                      Browse Jobs
+                    </Button>
+                  </Link>
                 </div>
               </div>
-              <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-                Connect with Trusted Drivers Across Kenya
-              </h1>
-              <p className="mb-8 text-lg text-white/90 md:text-xl">
-                Tani Africa connects cargo owners with reliable drivers for safe and efficient transport. 
-                Post your cargo, receive competitive bids, and track your shipment in real-time.
-              </p>
-              <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                <Link href="/auth/register">
-                  <Button size="lg" className="bg-white text-primary-600 hover:bg-gray-100">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/jobs">
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                    Browse Jobs
-                  </Button>
-                </Link>
-              </div>
-              <div className="mt-12 flex flex-wrap justify-center gap-8">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-300" />
-                  <span>500+ Active Drivers</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-300" />
-                  <span>1000+ Jobs Completed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-300" />
-                  <span>98% Customer Satisfaction</span>
+              
+              {/* Right Content - Hero Image */}
+              <div className="flex-1 relative">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                  <img
+                    src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&h=600&fit=crop"
+                    alt="Truck on the road"
+                    className="w-full h-auto object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  
+                  {/* Floating Badge */}
+                  <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-3 flex items-center gap-2">
+                    <div className="bg-green-100 p-2 rounded-lg">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Trusted by</p>
+                      <p className="font-bold text-gray-900">1,000+ Businesses</p>
+                    </div>
+                  </div>
+                  
+                  {/* Floating Badge 2 */}
+                  <div className="absolute -top-4 -right-4 bg-white rounded-xl shadow-xl p-3 flex items-center gap-2">
+                    <div className="bg-amber-100 p-2 rounded-lg">
+                      <Zap className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Fast Delivery</p>
+                      <p className="font-bold text-gray-900">Same Day</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Features Section */}
-        <section className="py-20">
+        {/* Features Section - Bright and Modern */}
+        <section className="py-20 bg-gradient-to-b from-white to-amber-50">
           <div className="container-custom">
-            <div className="mb-12 text-center">
-              <h2 className="text-3xl font-bold text-gray-900">Why Choose Tani Africa?</h2>
-              <p className="mt-4 text-lg text-gray-600">The trusted platform for cargo transportation in Kenya</p>
+            <div className="mb-16 text-center">
+              <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 mb-4">
+                <Sparkles className="h-4 w-4" />
+                Why Choose Us
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
+                Smart Logistics Made Simple
+              </h2>
+              <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+                Everything you need to transport goods efficiently across Kenya
+              </p>
             </div>
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-              <Card hover className="text-center">
-                <CardBody>
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-                    <Truck className="h-6 w-6 text-primary-600" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">Fast Delivery</h3>
-                  <p className="text-sm text-gray-600">
-                    Get your goods delivered quickly and efficiently across Kenya
-                  </p>
-                </CardBody>
-              </Card>
-              <Card hover className="text-center">
-                <CardBody>
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-                    <Package className="h-6 w-6 text-primary-600" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">Track Shipments</h3>
-                  <p className="text-sm text-gray-600">
-                    Real-time tracking of your shipments from pickup to delivery
-                  </p>
-                </CardBody>
-              </Card>
-              <Card hover className="text-center">
-                <CardBody>
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-                    <Clock className="h-6 w-6 text-primary-600" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">24/7 Support</h3>
-                  <p className="text-sm text-gray-600">
-                    Round-the-clock customer support for all your logistics needs
-                  </p>
-                </CardBody>
-              </Card>
-              <Card hover className="text-center">
-                <CardBody>
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-                    <Shield className="h-6 w-6 text-primary-600" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">Secure Transport</h3>
-                  <p className="text-sm text-gray-600">
-                    Safe and secure transportation with insured cargo
-                  </p>
-                </CardBody>
-              </Card>
+              {[
+                { icon: Truck, title: "Fast Delivery", desc: "Same-day and next-day delivery options available", color: "amber" },
+                { icon: Package, title: "Real-time Tracking", desc: "Monitor your shipment from pickup to delivery", color: "orange" },
+                { icon: Clock, title: "24/7 Support", desc: "Round-the-clock customer support", color: "rose" },
+                { icon: Shield, title: "Insured Cargo", desc: "Your goods are protected during transit", color: "amber" },
+              ].map((feature, index) => {
+                const Icon = feature.icon;
+                const colorClasses = {
+                  amber: "bg-amber-100 text-amber-600",
+                  orange: "bg-orange-100 text-orange-600",
+                  rose: "bg-rose-100 text-rose-600",
+                };
+                return (
+                  <Card key={index} hover className="group hover:shadow-xl transition-all duration-300">
+                    <CardBody className="text-center">
+                      <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl ${colorClasses[feature.color as keyof typeof colorClasses]} transition-all group-hover:scale-110`}>
+                        <Icon className="h-7 w-7" />
+                      </div>
+                      <h3 className="mb-2 text-lg font-semibold text-gray-900">{feature.title}</h3>
+                      <p className="text-sm text-gray-600">{feature.desc}</p>
+                    </CardBody>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </section>
 
         {/* How It Works Section */}
-        <section className="bg-gray-50 py-20">
+        <section className="py-20 bg-white">
           <div className="container-custom">
-            <div className="mb-12 text-center">
-              <h2 className="text-3xl font-bold text-gray-900">How It Works</h2>
-              <p className="mt-4 text-lg text-gray-600">Simple steps to get your cargo moving</p>
+            <div className="mb-16 text-center">
+              <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 mb-4">
+                <Target className="h-4 w-4" />
+                Simple Process
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
+                How Tani Africa Works
+              </h2>
+              <p className="mt-4 text-lg text-gray-600">Three simple steps to get your cargo moving</p>
             </div>
             <div className="grid gap-8 md:grid-cols-3">
-              <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-2xl font-bold text-primary-600">
-                  1
-                </div>
-                <h3 className="mb-2 text-xl font-semibold text-gray-900">Post Your Cargo</h3>
-                <p className="text-gray-600">
-                  Tell us what you need to transport, where from, and where to
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-2xl font-bold text-primary-600">
-                  2
-                </div>
-                <h3 className="mb-2 text-xl font-semibold text-gray-900">Receive Bids</h3>
-                <p className="text-gray-600">
-                  Get competitive offers from verified drivers in your area
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-2xl font-bold text-primary-600">
-                  3
-                </div>
-                <h3 className="mb-2 text-xl font-semibold text-gray-900">Track & Deliver</h3>
-                <p className="text-gray-600">
-                  Monitor your shipment until it reaches its destination safely
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Stats Section */}
-        <section className="py-20">
-          <div className="container-custom">
-            <div className="grid gap-8 md:grid-cols-3">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary-600">500+</div>
-                <p className="mt-2 text-gray-600">Active Drivers</p>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary-600">1,000+</div>
-                <p className="mt-2 text-gray-600">Jobs Completed</p>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary-600">98%</div>
-                <p className="mt-2 text-gray-600">Satisfaction Rate</p>
-              </div>
+              {[
+                { step: "1", title: "Post Your Cargo", desc: "Tell us what you need to transport, where from, and where to", icon: Package },
+                { step: "2", title: "Receive Bids", desc: "Get competitive offers from verified drivers in your area", icon: TrendingUp },
+                { step: "3", title: "Track & Deliver", desc: "Monitor your shipment until it reaches safely", icon: MapPin },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <div key={index} className="text-center group">
+                    <div className="relative mx-auto mb-6">
+                      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-2xl font-bold text-white shadow-lg transition-all group-hover:scale-110">
+                        {item.step}
+                      </div>
+                      {index < 2 && (
+                        <div className="absolute top-10 left-full hidden lg:block w-24">
+                          <ArrowRight className="h-8 w-8 text-amber-300" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 lg:hidden">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="mb-2 text-xl font-semibold text-gray-900">{item.title}</h3>
+                    <p className="text-gray-600">{item.desc}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
         {/* Testimonials Section */}
-        <section className="bg-gray-50 py-20">
+        <section className="py-20 bg-gradient-to-b from-amber-50 to-white">
           <div className="container-custom">
-            <div className="mb-12 text-center">
-              <h2 className="text-3xl font-bold text-gray-900">What Our Customers Say</h2>
+            <div className="mb-16 text-center">
+              <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 mb-4">
+                <Star className="h-4 w-4 fill-amber-500" />
+                Testimonials
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
+                What Our Customers Say
+              </h2>
               <p className="mt-4 text-lg text-gray-600">Trusted by businesses and individuals across Kenya</p>
             </div>
             <div className="grid gap-8 md:grid-cols-3">
-              <Card>
-                <CardBody>
-                  <div className="mb-4 flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current" />
-                    ))}
-                  </div>
-                  <p className="mb-4 text-gray-600">
-                    "Tani Africa made transporting our goods so easy. Found a reliable driver within hours!"
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-primary-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">John M.</p>
-                      <p className="text-sm text-gray-500">Business Owner</p>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-              <Card>
-                <CardBody>
-                  <div className="mb-4 flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current" />
-                    ))}
-                  </div>
-                  <p className="mb-4 text-gray-600">
-                    "Great platform! As a driver, I get consistent work and fair payments. Highly recommended."
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                      <Truck className="h-5 w-5 text-primary-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">Sarah K.</p>
-                      <p className="text-sm text-gray-500">Driver</p>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-              <Card>
-                <CardBody>
-                  <div className="mb-4 flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current" />
-                    ))}
-                  </div>
-                  <p className="mb-4 text-gray-600">
-                    "Real-time tracking gave me peace of mind. Will definitely use again!"
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                      <Package className="h-5 w-5 text-primary-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">Mary W.</p>
-                      <p className="text-sm text-gray-500">Small Business</p>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
+              {[
+                { name: "John M.", role: "Business Owner", content: "Tani Africa made transporting our goods so easy. Found a reliable driver within hours!", rating: 5, icon: Users },
+                { name: "Sarah K.", role: "Driver", content: "Great platform! As a driver, I get consistent work and fair payments. Highly recommended.", rating: 5, icon: Truck },
+                { name: "Mary W.", role: "Small Business", content: "Real-time tracking gave me peace of mind. Will definitely use again!", rating: 5, icon: Package },
+              ].map((testimonial, index) => {
+                const Icon = testimonial.icon;
+                return (
+                  <Card key={index} hover className="h-full">
+                    <CardBody>
+                      <div className="mb-4 flex text-amber-400">
+                        {[...Array(testimonial.rating)].map((_, i) => (
+                          <Star key={i} className="h-4 w-4 fill-current" />
+                        ))}
+                      </div>
+                      <p className="mb-6 text-gray-600 italic">"{testimonial.content}"</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                          <p className="text-sm text-gray-500">{testimonial.role}</p>
+                        </div>
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* CTA Section */}
+        {/* CTA Section - Bright Gradient */}
         <section className="py-20">
           <div className="container-custom">
-            <div className="rounded-2xl bg-gradient-to-r from-primary-600 to-secondary-600 p-8 text-center text-white md:p-12">
-              <h2 className="mb-4 text-2xl font-bold md:text-3xl">Ready to Transport Your Cargo?</h2>
-              <p className="mb-6 text-lg text-white/90">
-                Join thousands of satisfied customers using Tani Africa
-              </p>
-              <Link href="/auth/register">
-                <Button size="lg" className="bg-white text-primary-600 hover:bg-gray-100">
-                  Sign Up Now
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 p-8 text-center text-white md:p-12">
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+              </div>
+              <div className="relative z-10">
+                <h2 className="mb-4 text-3xl font-bold md:text-4xl">Ready to Transport Your Cargo?</h2>
+                <p className="mb-8 text-lg text-white/90 max-w-2xl mx-auto">
+                  Join thousands of satisfied customers using Tani Africa for their logistics needs
+                </p>
+                <Link href="/auth/register">
+                  <Button size="lg" className="bg-white text-amber-600 hover:bg-gray-100 shadow-lg">
+                    Get Started Now
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </section>
