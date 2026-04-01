@@ -1,8 +1,7 @@
+
 'use client';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 import { useEffect, useState } from 'react';
 import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -184,6 +183,7 @@ export default function AdminJobsPage() {
     <RoleBasedRoute allowedRoles={['ADMIN']}>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container-custom">
+          {/* Header */}
           <div className="mb-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -197,33 +197,88 @@ export default function AdminJobsPage() {
             </div>
           </div>
 
+          {/* Stats Cards */}
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="rounded-lg bg-white p-4 text-center shadow-sm border border-gray-100"><p className="text-2xl font-bold text-gray-900">{stats.total}</p><p className="text-sm text-gray-500">Total Jobs</p></div>
-            <div className="rounded-lg bg-yellow-50 p-4 text-center border border-yellow-100"><p className="text-2xl font-bold text-yellow-600">{stats.submitted}</p><p className="text-sm text-yellow-600">Submitted</p></div>
-            <div className="rounded-lg bg-blue-50 p-4 text-center border border-blue-100"><p className="text-2xl font-bold text-blue-600">{stats.bidding}</p><p className="text-sm text-blue-600">Bidding</p></div>
-            <div className="rounded-lg bg-green-50 p-4 text-center border border-green-100"><p className="text-2xl font-bold text-green-600">{stats.active}</p><p className="text-sm text-green-600">Active</p></div>
-            <div className="rounded-lg bg-gray-50 p-4 text-center border border-gray-100"><p className="text-2xl font-bold text-gray-600">{stats.completed}</p><p className="text-sm text-gray-600">Completed</p></div>
-            <div className="rounded-lg bg-red-50 p-4 text-center border border-red-100"><p className="text-2xl font-bold text-red-600">{stats.cancelled}</p><p className="text-sm text-red-600">Cancelled</p></div>
+            <div className="rounded-lg bg-white p-4 text-center shadow-sm border border-gray-100">
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm text-gray-500">Total Jobs</p>
+            </div>
+            <div className="rounded-lg bg-yellow-50 p-4 text-center border border-yellow-100">
+              <p className="text-2xl font-bold text-yellow-600">{stats.submitted}</p>
+              <p className="text-sm text-yellow-600">Submitted</p>
+            </div>
+            <div className="rounded-lg bg-blue-50 p-4 text-center border border-blue-100">
+              <p className="text-2xl font-bold text-blue-600">{stats.bidding}</p>
+              <p className="text-sm text-blue-600">Bidding</p>
+            </div>
+            <div className="rounded-lg bg-green-50 p-4 text-center border border-green-100">
+              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+              <p className="text-sm text-green-600">Active</p>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-4 text-center border border-gray-100">
+              <p className="text-2xl font-bold text-gray-600">{stats.completed}</p>
+              <p className="text-sm text-gray-600">Completed</p>
+            </div>
+            <div className="rounded-lg bg-red-50 p-4 text-center border border-red-100">
+              <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+              <p className="text-sm text-red-600">Cancelled</p>
+            </div>
           </div>
 
+          {/* Search and Filters */}
           <div className="mb-6 space-y-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex flex-1 max-w-md">
-                <input type="text" placeholder="Search by title, location, or client..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-l-lg border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                <button onClick={() => setShowFilters(!showFilters)} className={`rounded-r-lg border border-l-0 border-gray-300 px-4 py-2 transition-colors ${showFilters ? 'bg-primary-600 text-white' : 'bg-gray-50 hover:bg-gray-100'}`}><Filter className="h-5 w-5" /></button>
+                <input
+                  type="text"
+                  placeholder="Search by title, location, or client..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full rounded-l-lg border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                />
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`rounded-r-lg border border-l-0 border-gray-300 px-4 py-2 transition-colors ${
+                    showFilters ? 'bg-primary-600 text-white' : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <Filter className="h-5 w-5" />
+                </button>
               </div>
+              
               {(filter !== 'all' || searchTerm) && (
-                <button onClick={clearFilters} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"><X className="h-4 w-4" />Clear filters</button>
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-4 w-4" />
+                  Clear filters
+                </button>
               )}
             </div>
             
+            {/* Filter Tabs */}
             <div className="flex flex-wrap gap-2">
               {(['all', 'submitted', 'bidding', 'active', 'completed', 'cancelled'] as StatusType[]).map((status) => (
-                <button key={status} onClick={() => setFilter(status)} className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${filter === status ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    filter === status
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
                   {status === 'all' ? 'All Jobs' : status.charAt(0).toUpperCase() + status.slice(1)}
                   {status !== 'all' && (
-                    <span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${filter === status ? 'bg-white/20' : 'bg-gray-200'}`}>
-                      {status === 'submitted' && stats.submitted}{status === 'bidding' && stats.bidding}{status === 'active' && stats.active}{status === 'completed' && stats.completed}{status === 'cancelled' && stats.cancelled}
+                    <span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${
+                      filter === status ? 'bg-white/20' : 'bg-gray-200'
+                    }`}>
+                      {status === 'submitted' && stats.submitted}
+                      {status === 'bidding' && stats.bidding}
+                      {status === 'active' && stats.active}
+                      {status === 'completed' && stats.completed}
+                      {status === 'cancelled' && stats.cancelled}
                     </span>
                   )}
                 </button>
@@ -231,12 +286,23 @@ export default function AdminJobsPage() {
             </div>
           </div>
 
-          <div className="mb-4 text-sm text-gray-500">Showing {filteredJobs.length} of {jobs.length} jobs</div>
+          {/* Results Count */}
+          <div className="mb-4 text-sm text-gray-500">
+            Showing {filteredJobs.length} of {jobs.length} jobs
+          </div>
 
+          {/* Jobs List */}
           {filteredJobs.length === 0 ? (
             <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
               <p className="text-gray-500">No jobs found matching your criteria</p>
-              {(filter !== 'all' || searchTerm) && <button onClick={clearFilters} className="mt-4 text-primary-600 hover:underline">Clear filters</button>}
+              {(filter !== 'all' || searchTerm) && (
+                <button
+                  onClick={clearFilters}
+                  className="mt-4 text-primary-600 hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -246,17 +312,50 @@ export default function AdminJobsPage() {
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                       <div className="flex-1">
                         <div className="mb-2 flex flex-wrap items-center gap-3">
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(job.status)}`}><span>{getStatusIcon(job.status)}</span><span>{getStatusLabel(job.status)}</span></span>
-                          <span className="flex items-center gap-1 text-xs text-gray-500"><Calendar className="h-3 w-3" />{new Date(job.createdAt).toLocaleDateString()}</span>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(job.status)}`}>
+                            <span>{getStatusIcon(job.status)}</span>
+                            <span>{getStatusLabel(job.status)}</span>
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(job.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
-                        <h3 className="mb-2 text-lg font-semibold text-gray-900">{job.title || `Job #${job.id.slice(-8)}`}</h3>
-                        <div className="mb-2 flex items-start text-sm text-gray-600"><MapPin className="mr-1 h-4 w-4 flex-shrink-0 mt-0.5" /><span className="truncate">{job.pickUpLocation} → {job.dropOffLocation}</span></div>
-                        {job.client && <div className="mb-2 text-sm text-gray-600">Client: {job.client.firstName} {job.client.lastName} ({job.client.email})</div>}
-                        {job.price && <div className="flex items-center text-lg font-bold text-primary-600"><DollarSign className="h-4 w-4" />KES {job.price.toLocaleString()}</div>}
+                        <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                          {job.title || `Job #${job.id.slice(-8)}`}
+                        </h3>
+                        <div className="mb-2 flex items-start text-sm text-gray-600">
+                          <MapPin className="mr-1 h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <span className="truncate">{job.pickUpLocation} → {job.dropOffLocation}</span>
+                        </div>
+                        {job.client && (
+                          <div className="mb-2 text-sm text-gray-600">
+                            Client: {job.client.firstName} {job.client.lastName} ({job.client.email})
+                          </div>
+                        )}
+                        {job.price && (
+                          <div className="flex items-center text-lg font-bold text-primary-600">
+                            <DollarSign className="h-4 w-4" />
+                            KES {job.price.toLocaleString()}
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-2">
-                        <Link href={`/jobs/${job.id}`}><Button size="sm" variant="outline" className="flex items-center gap-1"><Eye className="h-4 w-4" /><span className="hidden sm:inline">View</span></Button></Link>
-                        <Button size="sm" variant="danger" onClick={() => handleDeleteJob(job.id)} className="flex items-center gap-1"><Trash2 className="h-4 w-4" /><span className="hidden sm:inline">Delete</span></Button>
+                        <Link href={`/jobs/${job.id}`}>
+                          <Button size="sm" variant="outline" className="flex items-center gap-1">
+                            <Eye className="h-4 w-4" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                        </Link>
+                        <Button 
+                          size="sm" 
+                          variant="danger" 
+                          onClick={() => handleDeleteJob(job.id)}
+                          className="flex items-center gap-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </Button>
                       </div>
                     </div>
                   </CardBody>
