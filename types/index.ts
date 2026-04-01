@@ -138,7 +138,7 @@ export interface Job {
   cargoWeight?: number;
   price?: number;
   scheduledDate?: string;
-  clientId: string;
+  clientId?: string;
   client?: User;
   driverId?: string;
   driver?: User;

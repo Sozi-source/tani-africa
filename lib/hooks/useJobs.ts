@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { jobsAPI } from '@/lib/api';
-import { Job, CreateJobData } from '@/types';
-import { useAuth } from '@/context/AuthContext';
+import { useState, useCallback, useEffect } from 'react';
+import { jobsAPI } from '@/lib/api/jobs';
+import { Job, CreateJobData, UpdateJobData } from '@/types';
 import toast from 'react-hot-toast';
 
 export const useJobs = () => {
@@ -11,84 +10,108 @@ export const useJobs = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { isAuthenticated, loading: authLoading } = useAuth();
-
-  // Stable ref so fetchJobs never causes useEffect to re-run
   const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await jobsAPI.getAll();
-      setJobs(Array.isArray(response) ? response : []);
+      const data = await jobsAPI.getAll();
+      setJobs(data);
       setError(null);
     } catch (err: any) {
-      console.error('Fetch jobs error:', err);
-      if (err?.response?.status !== 401) {
-        setError(err.message);
-        toast.error(err?.response?.data?.message || err.message || 'Failed to fetch jobs');
-      }
-      setJobs([]);
+      setError(err.message);
+      toast.error('Failed to load jobs');
     } finally {
       setLoading(false);
     }
-  }, []); // ← no dependencies, stable reference
+  }, []);
 
-  const createJob = useCallback(async (jobData: CreateJobData) => {
+  const getJobById = useCallback(async (id: string): Promise<Job | null> => {
+    try {
+      const job = await jobsAPI.getById(id);
+      return job;
+    } catch (err: any) {
+      toast.error('Failed to load job details');
+      return null;
+    }
+  }, []);
+
+  const createJob = useCallback(async (jobData: CreateJobData): Promise<Job> => {
     try {
       const newJob = await jobsAPI.create(jobData);
-      toast.success('Job posted successfully!');
+      toast.success('Job created successfully!');
       await fetchJobs();
       return newJob;
     } catch (err: any) {
-      const message = err?.response?.data?.message || err.message || 'Failed to create job';
-      toast.error(message);
+      const message = err?.response?.data?.message;
+      const errorMsg = Array.isArray(message)
+        ? message.join(', ')
+        : message || 'Failed to create job';
+      console.error('API validation error:', errorMsg);
+      toast.error(errorMsg);
       throw err;
     }
   }, [fetchJobs]);
 
-  const updateJob = useCallback(async (id: string, data: Partial<CreateJobData>) => {
+  const updateJob = useCallback(async (id: string, data: UpdateJobData): Promise<Job> => {
     try {
-      const updatedJob = await jobsAPI.update(id, data);
-      toast.success('Job updated successfully!');
+      const updated = await jobsAPI.update(id, data);
+      toast.success('Job updated successfully');
       await fetchJobs();
-      return updatedJob;
+      return updated;
     } catch (err: any) {
-      const message = err?.response?.data?.message || err.message || 'Failed to update job';
-      toast.error(message);
+      const message = err?.response?.data?.message;
+      const errorMsg = Array.isArray(message)
+        ? message.join(', ')
+        : message || 'Failed to update job';
+      toast.error(errorMsg);
       throw err;
     }
   }, [fetchJobs]);
 
-  const deleteJob = useCallback(async (id: string) => {
+  const updateJobStatus = useCallback(async (id: string, status: string): Promise<Job> => {
+    try {
+      const updated = await jobsAPI.updateStatus(id, status);
+      toast.success(`Job status updated to ${status}`);
+      await fetchJobs();
+      return updated;
+    } catch (err: any) {
+      const message = err?.response?.data?.message;
+      const errorMsg = Array.isArray(message)
+        ? message.join(', ')
+        : message || 'Failed to update job status';
+      toast.error(errorMsg);
+      throw err;
+    }
+  }, [fetchJobs]);
+
+  const deleteJob = useCallback(async (id: string): Promise<void> => {
     try {
       await jobsAPI.delete(id);
-      toast.success('Job deleted successfully!');
+      toast.success('Job deleted successfully');
       await fetchJobs();
     } catch (err: any) {
-      const message = err?.response?.data?.message || err.message || 'Failed to delete job';
-      toast.error(message);
+      const message = err?.response?.data?.message;
+      const errorMsg = Array.isArray(message)
+        ? message.join(', ')
+        : message || 'Failed to delete job';
+      toast.error(errorMsg);
       throw err;
     }
   }, [fetchJobs]);
 
-  // Only runs when auth state settles — fetchJobs is stable so won't re-trigger
   useEffect(() => {
-    if (authLoading) return; // wait for auth to resolve
-
-    if (isAuthenticated) {
-      fetchJobs();
-    } else {
-      setJobs([]);
-      setLoading(false);
-    }
-  }, [authLoading, isAuthenticated]); // ← fetchJobs intentionally omitted
+    fetchJobs();
+  }, [fetchJobs]);
 
   return {
     jobs,
-    loading,  // ← just local loading, NOT loading || authLoading
+    loading,
     error,
     fetchJobs,
+    getJobById,
     createJob,
     updateJob,
+    updateJobStatus,
     deleteJob,
+    refetch: fetchJobs,
   };
 };

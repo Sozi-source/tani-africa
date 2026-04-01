@@ -1,4 +1,3 @@
-// src/components/jobs/CreateJobModal.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,7 +15,6 @@ const jobSchema = z.object({
   description: z.string().optional(),
   pickUpLocation: z.string().min(1, 'Pickup location is required'),
   dropOffLocation: z.string().min(1, 'Dropoff location is required'),
-  cargoType: z.string().optional(),
   cargoWeight: z.number().min(0, 'Weight must be positive').optional(),
   price: z.number().min(0, 'Price must be positive').optional(),
   scheduledDate: z.string().optional(),
@@ -31,19 +29,6 @@ interface CreateJobModalProps {
   isSubmitting?: boolean;
 }
 
-const cargoTypes = [
-  { value: '', label: 'Select cargo type' },
-  { value: 'General Goods', label: 'General Goods' },
-  { value: 'Perishable', label: 'Perishable (Food, Flowers, etc.)' },
-  { value: 'Furniture', label: 'Furniture' },
-  { value: 'Electronics', label: 'Electronics' },
-  { value: 'Construction Materials', label: 'Construction Materials' },
-  { value: 'Agricultural Products', label: 'Agricultural Products' },
-  { value: 'Hazardous Materials', label: 'Hazardous Materials' },
-  { value: 'Livestock', label: 'Livestock' },
-  { value: 'Other', label: 'Other' },
-];
-
 export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   isOpen,
   onClose,
@@ -52,7 +37,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [charCount, setCharCount] = useState(0);
-  
+
   const {
     register,
     handleSubmit,
@@ -66,7 +51,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
       description: '',
       pickUpLocation: '',
       dropOffLocation: '',
-      cargoType: '',
       cargoWeight: undefined,
       price: undefined,
       scheduledDate: '',
@@ -74,30 +58,44 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   });
 
   const description = watch('description', '');
-  
+
   useEffect(() => {
     setCharCount(description?.length || 0);
   }, [description]);
 
   const handleFormSubmit = async (data: JobFormData) => {
-    // Validate user is logged in
     if (!user?.id) {
       toast.error('You must be logged in to post a job');
       return;
     }
 
-    // Build job data
-    const jobData: CreateJobData = {
+    if (!data.pickUpLocation || !data.dropOffLocation) {
+      toast.error('Pickup and dropoff locations are required');
+      return;
+    }
+
+    if (data.price && data.price > 10000000) {
+      toast.error('Price seems too high. Please verify the amount.');
+      return;
+    }
+
+    if (data.cargoWeight && data.cargoWeight > 50000) {
+      toast.error('Weight seems too high. Maximum weight is 50,000 kg.');
+      return;
+    }
+
+    const jobData = {
       pickUpLocation: data.pickUpLocation,
       dropOffLocation: data.dropOffLocation,
       clientId: user.id,
       ...(data.title && data.title.trim() !== '' && { title: data.title.trim() }),
       ...(data.description && data.description.trim() !== '' && { description: data.description.trim() }),
-      ...(data.cargoType && data.cargoType !== '' && { cargoType: data.cargoType }),
       ...(data.cargoWeight !== undefined && data.cargoWeight > 0 && { cargoWeight: Number(data.cargoWeight) }),
       ...(data.price !== undefined && data.price > 0 && { price: Number(data.price) }),
       ...(data.scheduledDate && { scheduledDate: new Date(data.scheduledDate).toISOString() }),
-    };
+    } as CreateJobData;
+
+    console.log('Submitting job data:', jobData);
 
     await onSubmit(jobData);
     reset();
@@ -110,15 +108,14 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     }
   };
 
-  // Form Field Component
-  const FormField = ({ 
-    label, 
-    icon: Icon, 
-    required, 
-    children 
-  }: { 
-    label: string; 
-    icon: React.ComponentType<{ className?: string }>; 
+  const FormField = ({
+    label,
+    icon: Icon,
+    required,
+    children,
+  }: {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
     required?: boolean;
     children: React.ReactNode;
   }) => (
@@ -187,21 +184,8 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
             )}
           </FormField>
 
-          {/* Cargo Type and Weight */}
+          {/* Cargo Weight and Price */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Cargo Type" icon={Package}>
-              <select
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                {...register('cargoType')}
-              >
-                {cargoTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
             <FormField label="Cargo Weight (kg)" icon={Weight}>
               <input
                 type="number"
@@ -214,10 +198,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
               )}
               <p className="text-xs text-gray-500">Optional - Helps drivers with vehicle capacity</p>
             </FormField>
-          </div>
 
-          {/* Price and Date */}
-          <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Price (KES)" icon={DollarSign}>
               <input
                 type="number"
@@ -230,19 +211,20 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
               )}
               <p className="text-xs text-gray-500">Optional - Leave blank for bidding</p>
             </FormField>
-
-            <FormField label="Scheduled Date" icon={Calendar}>
-              <input
-                type="datetime-local"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
-                {...register('scheduledDate')}
-              />
-              {errors.scheduledDate && (
-                <p className="text-sm text-red-600">{errors.scheduledDate.message}</p>
-              )}
-              <p className="text-xs text-gray-500">Optional - When should the job be completed?</p>
-            </FormField>
           </div>
+
+          {/* Scheduled Date */}
+          <FormField label="Scheduled Date" icon={Calendar}>
+            <input
+              type="datetime-local"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              {...register('scheduledDate')}
+            />
+            {errors.scheduledDate && (
+              <p className="text-sm text-red-600">{errors.scheduledDate.message}</p>
+            )}
+            <p className="text-xs text-gray-500">Optional - When should the job be completed?</p>
+          </FormField>
 
           {/* Description */}
           <FormField label="Description" icon={FileText}>

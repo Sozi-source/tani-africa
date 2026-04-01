@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Job, CreateJobData } from '@/types';
+import { Job, CreateJobData, UpdateJobData } from '@/types';
 
 export const jobsAPI = {
   getAll: async (): Promise<Job[]> => {
@@ -27,7 +27,7 @@ export const jobsAPI = {
     return response as unknown as Job;
   },
   
-  update: async (id: string, data: Partial<CreateJobData>): Promise<Job> => {
+  update: async (id: string, data: UpdateJobData): Promise<Job> => {
     const response = await apiClient.patch(`/jobs/${id}`, data);
     return response as unknown as Job;
   },

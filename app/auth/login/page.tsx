@@ -70,9 +70,9 @@ export default function LoginPage() {
             <div className="mb-6 space-y-2">
               <p className="text-center text-sm text-gray-500">Quick Test Accounts:</p>
               <div className="flex flex-wrap justify-center gap-2">
-                <button type="button" onClick={() => setTestCredentials('quicktest@example.com', 'password123')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Test User</button>
-                <button type="button" onClick={() => setTestCredentials('admin@example.com', 'Admin123!')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Admin User</button>
-                <button type="button" onClick={() => setTestCredentials('driver@example.com', 'Driver123!')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Driver User</button>
+                <button type="button" onClick={() => setTestCredentials('client@example.com', 'client123')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Client User</button>
+                <button type="button" onClick={() => setTestCredentials('admin@example.com', 'admin123')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Admin User</button>
+                <button type="button" onClick={() => setTestCredentials('driver@example.com', 'driver123')} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200">Driver User</button>
               </div>
             </div>
 

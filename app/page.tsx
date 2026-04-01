@@ -1,4 +1,5 @@
 'use client';
+
 import { useAuth } from '@/lib/hooks/useAuth';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useRouter } from 'next/navigation';
@@ -31,10 +32,11 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (isAuthenticated && user) {
+        // Redirect to role-specific dashboard
         if (user.role === 'CLIENT') {
           router.push('/dashboard');
         } else if (user.role === 'DRIVER') {
-          router.push('/dashboard/driver');
+          router.push('/dashboard'); // FIXED: Changed from '/dashboard/driver' to '/dashboard'
         } else if (user.role === 'ADMIN') {
           router.push('/admin');
         }

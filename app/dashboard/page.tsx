@@ -10,6 +10,7 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PlaceBidModal } from '@/components/bids/PlaceBidModal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api/client';
@@ -38,6 +39,7 @@ import {
   X,
   Grid3x3,
   List,
+  MapPin,
 } from 'lucide-react';
 import { Job, JobStatus, Bid, User as UserType, Vehicle } from '@/types';
 
@@ -139,39 +141,66 @@ function ResponsiveQuickAction({
   );
 }
 
-// ==================== RESPONSIVE JOB CARD (Fixed Type Error) ====================
-function ResponsiveJobCard({ job }: { job: JobWithBids }) {
+// ==================== RESPONSIVE JOB CARD WITH BID BUTTON ====================
+function ResponsiveJobCard({ 
+  job, 
+  showBidButton = false,
+  onPlaceBid 
+}: { 
+  job: JobWithBids; 
+  showBidButton?: boolean;
+  onPlaceBid?: (job: JobWithBids) => void;
+}) {
   const config = getStatusConfig(job.status);
   
   return (
-    <Link href={`/jobs/${job.id}`}>
-      <Card hover className="cursor-pointer transition-all hover:shadow-md">
-        <CardBody className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex-1">
-              <p className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-2">
-                {job.title || `${job.pickUpLocation} → ${job.dropOffLocation}`}
-              </p>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
-                  {config.icon} {config.label}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {job.bids?.length || 0} bid{job.bids?.length !== 1 ? 's' : ''}
-                </span>
+    <Card hover className="cursor-pointer transition-all hover:shadow-md">
+      <CardBody className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex-1">
+            <Link href={`/jobs/${job.id}`}>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-2">
+                  {job.title || `${job.pickUpLocation} → ${job.dropOffLocation}`}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
+                    {config.icon} {config.label}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {job.bids?.length || 0} bid{job.bids?.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
               </div>
-            </div>
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
             {job.price && (
-              <div className="sm:text-right">
-                <span className="text-base sm:text-lg font-bold text-primary-600 whitespace-nowrap">
-                  KES {job.price.toLocaleString()}
-                </span>
-              </div>
+              <span className="text-base sm:text-lg font-bold text-primary-600 whitespace-nowrap">
+                KES {job.price.toLocaleString()}
+              </span>
+            )}
+            {showBidButton && job.status === 'BIDDING' && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => onPlaceBid?.(job)}
+                className="whitespace-nowrap"
+              >
+                Place Bid
+              </Button>
+            )}
+            {!showBidButton && (
+              <Link href={`/jobs/${job.id}`}>
+                <Button size="sm" variant="outline" className="whitespace-nowrap">
+                  View Details
+                </Button>
+              </Link>
             )}
           </div>
-        </CardBody>
-      </Card>
-    </Link>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
@@ -414,13 +443,13 @@ function ClientDashboard({ user }: { user: UserType }) {
             
             <div className={`hidden sm:grid ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'} gap-3 sm:gap-4`}>
               {stats.userJobs.slice(0, 6).map(job => (
-                <ResponsiveJobCard key={job.id} job={job} />
+                <ResponsiveJobCard key={job.id} job={job} showBidButton={false} />
               ))}
             </div>
             
             <div className="sm:hidden space-y-2">
               {stats.userJobs.slice(0, 3).map(job => (
-                <ResponsiveJobCard key={job.id} job={job} />
+                <ResponsiveJobCard key={job.id} job={job} showBidButton={false} />
               ))}
             </div>
           </div>
@@ -433,9 +462,12 @@ function ClientDashboard({ user }: { user: UserType }) {
 // ==================== DRIVER DASHBOARD ====================
 function DriverDashboard({ user }: { user: UserType }) {
   const { jobs, loading: jobsLoading } = useJobs();
-  const { bids, loading: bidsLoading } = useBids();
+  const { bids, loading: bidsLoading, placeBid, refetch: refetchBids } = useBids();
   const { vehicles, loading: vehiclesLoading } = useVehicles(user.id);
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedJob, setSelectedJob] = useState<JobWithBids | null>(null);
+  const [showBidModal, setShowBidModal] = useState(false);
   
   const loading = jobsLoading || bidsLoading || vehiclesLoading;
 
@@ -450,6 +482,17 @@ function DriverDashboard({ user }: { user: UserType }) {
     return { myBids, myJobs, availableJobs, acceptedBids, earnings };
   }, [jobs, bids, user.id]);
 
+  const handlePlaceBid = (job: JobWithBids) => {
+    setSelectedJob(job);
+    setShowBidModal(true);
+  };
+
+  const handleBidSuccess = async () => {
+    await Promise.all([refetchBids()]);
+    setShowBidModal(false);
+    setSelectedJob(null);
+  };
+
   if (loading) return <DashboardLoader />;
 
   const formattedEarnings = stats.earnings >= 1000 
@@ -457,58 +500,123 @@ function DriverDashboard({ user }: { user: UserType }) {
     : `KES ${stats.earnings}`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <div className="container-custom py-4 sm:py-8">
-        <WelcomeBanner
-          firstName={user.firstName}
-          role={user.role}
-          subtitle="Find loads, place bids, and grow your business"
-          gradient="from-green-600 to-teal-600"
-        />
-
-        <div className="mt-6 sm:mt-8 mb-6 sm:mb-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-            <ResponsiveStatCard 
-              title="Available Jobs" 
-              value={stats.availableJobs.length} 
-              icon={Package} 
-              color="from-blue-500 to-blue-600"
-            />
-            <ResponsiveStatCard 
-              title="Active Deliveries" 
-              value={stats.myJobs.filter(j => j.status === 'ACTIVE').length} 
-              icon={Truck} 
-              color="from-green-500 to-green-600"
-            />
-            <ResponsiveStatCard 
-              title="Bids Placed" 
-              value={stats.myBids.length} 
-              icon={Hammer} 
-              color="from-yellow-500 to-yellow-600"
-            />
-            <ResponsiveStatCard 
-              title="Earnings" 
-              value={formattedEarnings} 
-              icon={DollarSign} 
-              color="from-purple-500 to-purple-600"
-            />
+        {/* Welcome Banner */}
+        <div className="rounded-2xl bg-gradient-to-r from-green-600 to-teal-600 p-6 sm:p-8 text-white shadow-xl mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-white/80 text-sm sm:text-base">Welcome back,</p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-1">{user.firstName}</h1>
+              <p className="text-white/80 text-xs sm:text-sm mt-2">Find loads, place bids, and grow your business</p>
+            </div>
+            <div className="hidden sm:block">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 text-xs sm:text-sm font-semibold">
+                <Truck className="h-3 w-3 sm:h-4 sm:w-4" />
+                Driver
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="mb-6 sm:mb-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-8">
+          <div className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Available Jobs</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.availableJobs.length}</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 p-2.5">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Active Deliveries</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.myJobs.filter(j => j.status === 'ACTIVE').length}</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 p-2.5">
+                <Truck className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Bids Placed</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.myBids.length}</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 p-2.5">
+                <Hammer className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Total Earnings</p>
+                <p className="text-2xl font-bold text-green-600">{formattedEarnings}</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 p-2.5">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <ResponsiveQuickAction href="/jobs" title="Browse Jobs" subtitle="Find available shipments" icon={Briefcase} accent />
-            <ResponsiveQuickAction href="/bids" title="My Bids" subtitle="Track your submitted bids" icon={Hammer} />
-            <ResponsiveQuickAction href="/vehicles" title="My Vehicles" subtitle={`${vehicles.length} registered`} icon={Truck} />
+            <Link href="/jobs">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 cursor-pointer hover:shadow-md transition-all">
+                <div className="rounded-lg bg-blue-100 p-2">
+                  <Briefcase className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-blue-900">Browse Jobs</p>
+                  <p className="text-xs text-blue-600">Find available shipments</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-blue-400 ml-auto" />
+              </div>
+            </Link>
+            <Link href="/bids">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200 cursor-pointer hover:shadow-md transition-all">
+                <div className="rounded-lg bg-gray-100 p-2">
+                  <Hammer className="h-5 w-5 text-gray-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">My Bids</p>
+                  <p className="text-xs text-gray-500">Track your submitted bids</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-400 ml-auto" />
+              </div>
+            </Link>
+            <Link href="/vehicles">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200 cursor-pointer hover:shadow-md transition-all">
+                <div className="rounded-lg bg-gray-100 p-2">
+                  <Truck className="h-5 w-5 text-gray-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">My Vehicles</p>
+                  <p className="text-xs text-gray-500">{vehicles.length} registered</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-400 ml-auto" />
+              </div>
+            </Link>
           </div>
         </div>
 
+        {/* Available Jobs Section */}
         {stats.availableJobs.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-base sm:text-lg font-semibold text-gray-900">Available Jobs</h2>
               <div className="flex items-center gap-2">
+                {/* View Toggle */}
                 <div className="hidden sm:flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('grid')}
@@ -530,19 +638,196 @@ function DriverDashboard({ user }: { user: UserType }) {
                 )}
               </div>
             </div>
+
+            {/* Desktop Grid/List View */}
             <div className={`hidden sm:grid ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'} gap-3 sm:gap-4`}>
               {stats.availableJobs.slice(0, 6).map(job => (
-                <ResponsiveJobCard key={job.id} job={job} />
+                <div 
+                  key={job.id} 
+                  className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                  onClick={(e) => {
+                    // Navigate to job details if click is not on the button
+                    if (!(e.target as HTMLElement).closest('.bid-button')) {
+                      router.push(`/jobs/${job.id}`);
+                    }
+                  }}
+                >
+                  <div className="p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                            <span>💰</span>
+                            <span>Bidding</span>
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {job.bids?.length || 0} bids
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-gray-900 text-sm sm:text-base mb-1 line-clamp-2 group-hover:text-primary-600 transition-colors">
+                          {job.title || `Transport from ${job.pickUpLocation}`}
+                        </h3>
+                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                          <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{job.pickUpLocation} → {job.dropOffLocation}</span>
+                        </div>
+                        {job.cargoType && (
+                          <div className="flex items-center text-xs text-gray-400 mt-1">
+                            <Package className="h-3 w-3 mr-1" />
+                            <span>{job.cargoType}{job.cargoWeight ? ` • ${job.cargoWeight} kg` : ''}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {job.price && (
+                          <span className="text-lg font-bold text-primary-600 whitespace-nowrap">
+                            KES {job.price.toLocaleString()}
+                          </span>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlaceBid(job);
+                          }}
+                          className="whitespace-nowrap bid-button text-sm px-4 py-1.5"
+                        >
+                          Place Bid
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
+
+            {/* Mobile List View */}
             <div className="sm:hidden space-y-2">
               {stats.availableJobs.slice(0, 3).map(job => (
-                <ResponsiveJobCard key={job.id} job={job} />
+                <div 
+                  key={job.id} 
+                  className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:shadow-md transition-all"
+                  onClick={() => router.push(`/jobs/${job.id}`)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                          <span>💰</span>
+                          <span>Bidding</span>
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {job.bids?.length || 0} bids
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">
+                        {job.title || `Transport from ${job.pickUpLocation}`}
+                      </h3>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">{job.pickUpLocation} → {job.dropOffLocation}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      {job.price && (
+                        <span className="text-sm font-bold text-primary-600 whitespace-nowrap">
+                          KES {job.price.toLocaleString()}
+                        </span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlaceBid(job);
+                        }}
+                        className="whitespace-nowrap bid-button text-xs px-3 py-1"
+                      >
+                        Place Bid
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* Empty State */}
+        {stats.availableJobs.length === 0 && (
+          <div className="bg-white rounded-xl p-12 text-center border border-gray-100 shadow-sm">
+            <div className="rounded-full bg-gray-100 p-4 w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <Package className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Available Jobs</h3>
+            <p className="text-sm text-gray-500 mb-4">Check back later for new opportunities</p>
+            <Link href="/jobs">
+              <Button variant="outline">Browse All Jobs</Button>
+            </Link>
+          </div>
+        )}
+
+        {/* Recent Bids Section */}
+        {stats.myBids.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Recent Bids</h2>
+            <div className="space-y-2">
+              {stats.myBids.slice(0, 3).map((bid) => (
+                <div 
+                  key={bid.id} 
+                  className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => router.push(`/jobs/${bid.jobId}`)}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">
+                        {bid.job?.title || `Job #${bid.jobId.slice(-8)}`}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-sm font-semibold text-primary-600">
+                          KES {bid.price.toLocaleString()}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          bid.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                          bid.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {bid.status === 'ACCEPTED' ? '✓ Accepted' : 
+                           bid.status === 'REJECTED' ? '✗ Rejected' : 
+                           '⏳ Pending'}
+                        </span>
+                      </div>
+                      {bid.message && (
+                        <p className="mt-2 text-xs text-gray-500 line-clamp-1">"{bid.message}"</p>
+                      )}
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {stats.myBids.length > 3 && (
+              <div className="mt-3 text-center">
+                <Link href="/bids" className="text-sm text-primary-600 hover:underline">
+                  View all {stats.myBids.length} bids →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Place Bid Modal */}
+      {selectedJob && (
+        <PlaceBidModal
+          isOpen={showBidModal}
+          onClose={() => setShowBidModal(false)}
+          jobId={selectedJob.id}
+          jobTitle={selectedJob.title || `Transport from ${selectedJob.pickUpLocation}`}
+          onSuccess={handleBidSuccess}
+        />
+      )}
     </div>
   );
 }
