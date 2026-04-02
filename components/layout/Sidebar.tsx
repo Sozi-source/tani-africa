@@ -50,23 +50,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const isActive = (href: string) => pathname === href;
 
-  if (!isOpen) return null;
-
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - only visible on mobile when sidebar is open */}
       <div
-        className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 lg:hidden ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={onClose}
       />
       
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl lg:sticky lg:top-0 lg:z-0">
+      {/* Sidebar - always in DOM, transforms based on isOpen */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transition-transform duration-300 ease-in-out
+        lg:sticky lg:top-0 lg:translate-x-0 lg:z-0
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
         <div className="flex h-full flex-col">
           {/* Header with close button */}
           <div className="flex items-center justify-between border-b border-gray-200 p-4">
             <Link href="/" className="flex items-center space-x-2" onClick={onClose}>
-              <Truck className="h-8 w-8 text-primary-500" />
+              <Truck className="h-8 w-8 text-amber-500" />
               <span className="text-xl font-bold text-gray-900">Tani Africa</span>
             </Link>
             <button
@@ -81,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {user && (
             <div className="border-b border-gray-200 p-4">
               <div className="flex items-center space-x-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white">
                   {user.firstName?.[0]}{user.lastName?.[0]}
                 </div>
                 <div>
@@ -101,8 +105,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={`mx-2 mb-1 flex items-center space-x-3 rounded-lg px-4 py-2.5 transition-colors ${
                   isActive(item.href)
-                    ? 'bg-primary-50 text-primary-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-primary-600'
+                    ? 'bg-amber-50 text-amber-600'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-amber-600'
                 }`}
               >
                 <item.icon className="h-5 w-5" />
@@ -119,8 +123,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={`mx-2 mb-1 flex items-center space-x-3 rounded-lg px-4 py-2.5 transition-colors ${
                   isActive(item.href)
-                    ? 'bg-primary-50 text-primary-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-primary-600'
+                    ? 'bg-amber-50 text-amber-600'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-amber-600'
                 }`}
               >
                 <item.icon className="h-5 w-5" />

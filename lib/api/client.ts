@@ -3,7 +3,6 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosE
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tani-africa-api.onrender.com/api/v1';
 
-// Add debug flag for development
 const isDev = process.env.NODE_ENV === 'development';
 
 const apiClient: AxiosInstance = axios.create({
@@ -13,7 +12,6 @@ const apiClient: AxiosInstance = axios.create({
   },
   timeout: 60000,
   validateStatus: function (status) {
-    // Accept all status codes (we'll handle them manually)
     return true;
   },
 });
@@ -22,17 +20,16 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
-    
-    // Log request in development
+
     if (isDev) {
       console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, config.data);
     }
-    
+
     return config;
   },
   (error: unknown): Promise<unknown> => {
@@ -43,36 +40,32 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor — handles all responses
+// Response interceptor — returns unwrapped response.data directly
+// Return type is `any` so callers can type the result themselves via generics
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    // Log response in development
+  (response: AxiosResponse): any => {
     if (isDev) {
       console.log(`📥 ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
     }
-    
-    // If status is 200-299, return data
+
+    // 200-299: return unwrapped data directly
     if (response.status >= 200 && response.status < 300) {
       return response.data;
     }
-    
-    // For 400 status, it might still be valid data
-    // Check if the response contains data (like jobs list)
+
+    // 400 with array/data body — treat as valid (e.g. jobs list)
     if (response.status === 400 && response.data) {
-      // If it's an array or has data property, it might be a valid response
       if (Array.isArray(response.data) || response.data.data) {
         console.warn(`⚠️ Received 400 but data exists:`, response.data);
         return response.data;
       }
     }
-    
-    // Otherwise, reject with error
+
     return Promise.reject(response);
   },
   async (error: AxiosError): Promise<unknown> => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    
-    // Log error in development
+
     if (isDev) {
       console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         status: error.response?.status,
@@ -80,53 +73,45 @@ apiClient.interceptors.response.use(
         message: error.message,
       });
     }
-    
+
     // Handle 401 Unauthorized
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // Clear auth data
-      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
-      
-      // Don't redirect if already on login page
-      const isLoginPage = window.location.pathname.includes('/auth/login');
+
+      const isAuthPage = window.location.pathname.startsWith('/auth/');
       const isRefreshRequest = originalRequest.url?.includes('/auth/refresh');
-      
-      if (!isLoginPage && !isRefreshRequest) {
-        window.location.href = '/auth/login?session=expired';
+
+      if (!isAuthPage && !isRefreshRequest) {
+        window.location.replace('/auth/login?session=expired');
       }
     }
-    
-    // Handle 403 Forbidden
+
     if (error.response?.status === 403) {
       console.error('Access forbidden:', error.response?.data);
     }
-    
-    // Handle 404 Not Found
+
     if (error.response?.status === 404) {
       console.error('Resource not found:', error.config?.url);
     }
-    
-    // Handle 500 Server Error
+
     if (error.response?.status && error.response.status >= 500) {
       console.error('Server error:', error.response?.data);
     }
-    
-    // Handle network errors
+
     if (error.code === 'ERR_NETWORK') {
       console.error('Network error - check your connection');
     }
-    
-    // Handle timeout errors
+
     if (error.code === 'ECONNABORTED') {
       console.error('Request timeout');
     }
-    
-    // Return the error response data if available, otherwise the error
+
     if (error.response?.data) {
       return Promise.reject(error.response.data);
     }
-    
+
     return Promise.reject(error);
   }
 );

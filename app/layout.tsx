@@ -1,54 +1,30 @@
-import type { Metadata, Viewport } from 'next';
-import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
+// app/layout.tsx
+import { Inter } from 'next/font/google';
 import './globals.css';
-import { ClientLayout } from './client-layout'; // ← add this
+import { Metadata } from 'next';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from '@/context/AuthContext';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-  weight: ['300', '400', '500', '600', '700', '800'],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
-  weight: ['300', '400', '500', '600', '700'],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
-  display: 'swap',
-  weight: ['400', '500', '600', '700'],
-});
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: true,
-};
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Tani Africa - Logistics & Transport Solutions',
-  description: 'Connect with trusted drivers and transport goods across Kenya',
+  title: { default: 'Tani Africa - Smart Logistics Platform', template: '%s | Tani Africa' },
+  description: 'Connect with verified drivers, get competitive bids, and track your shipment in real-time across Kenya.',
+  keywords: ['logistics', 'delivery', 'Kenya', 'cargo', 'transport'],
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html 
-      lang="en" 
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
-      data-scroll-behavior="smooth"
-    >
-      <body className="font-sans antialiased">
-        <ClientLayout>{children}</ClientLayout> {/* ← wrap children */}
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
+      <body className={`${inter.className} antialiased min-h-screen flex flex-col`}>
+        <AuthProvider>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <Toaster position="top-right" toastOptions={{ duration: 4000, style: { fontFamily: 'var(--font-inter)' } }} />
+        </AuthProvider>
       </body>
     </html>
   );
