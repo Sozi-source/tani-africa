@@ -33,44 +33,47 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  // Initialize with null for SSR - will hydrate on client
+  // ✅ NO useRouter() here - removed
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
 
-  // Restore session from localStorage on mount (client-side only)
   useEffect(() => {
-    setMounted(true);
-    
-    // Only run on client
-    if (typeof window !== 'undefined') {
-      const storedUser = authAPI.getCurrentUser();
-      const storedToken = authAPI.getToken();
-
-      if (storedUser && storedToken) {
-        setUser(storedUser);
-        setToken(storedToken);
+    const restoreSession = () => {
+      try {
+        const storedToken = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
+        
+        if (storedToken && storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setToken(storedToken);
+          setUser(parsedUser);
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    
+    restoreSession();
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
     try {
       const response = await authAPI.login(credentials);
       const { accessToken, refreshToken, user: userData } = response;
-
+      
       authAPI.setAuthData(accessToken, refreshToken, userData);
+      localStorage.setItem('auth_token', accessToken);
+      
       setToken(accessToken);
       setUser(userData);
-      toast.success('Login successful!');
+      
+      toast.success(`Welcome ${userData.firstName || userData.role}!`);
       return response;
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        'Login failed. Please check your credentials.';
+      const message = error?.response?.data?.message || error?.message || 'Login failed. Please check your credentials.';
       toast.error(message);
       throw error;
     }
@@ -82,26 +85,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
       toast.success('Registration successful! Please sign in.');
       return response;
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        'Registration failed. Please try again.';
+      const message = error?.response?.data?.message || error?.message || 'Registration failed. Please try again.';
       toast.error(message);
       throw error;
     }
   };
 
   const logout = () => {
-    authAPI.logout();
+    // Clear all storage
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+    
+    // Clear cookies
+    document.cookie.split(";").forEach(function(c) {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+    
+    // Clear state
     setUser(null);
     setToken(null);
+    
     toast.success('Logged out successfully');
+    
+    // ✅ Use window.location instead of router
+    window.location.href = '/auth/login';
   };
 
   const value: AuthContextType = {
     user,
     token,
-    loading: loading || !mounted, // Show loading until mounted
+    loading,
     login,
     register,
     logout,
@@ -110,16 +126,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isDriver: user?.role === 'DRIVER',
     isAdmin: user?.role === 'ADMIN',
   };
-
-  // During SSR, render children with default state
-  // This prevents hydration mismatches
-  if (!mounted) {
-    return (
-      <AuthContext.Provider value={value}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

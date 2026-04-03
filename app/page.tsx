@@ -169,7 +169,7 @@ export default function HomePage() {
                   Testimonials
                 </a>
                 <div className="pt-2 flex flex-col gap-2">
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" size="sm" className="w-full border-white text-white hover:bg-white/10">
                       Log In
                     </Button>

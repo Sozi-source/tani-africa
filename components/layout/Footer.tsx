@@ -24,79 +24,144 @@ export function Footer() {
 
   return (
     <footer className="bg-gray-900 text-white mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand Section */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
+        
+        {/* Main Footer Content - Mobile First Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 md:gap-10">
+          
+          {/* Brand Section - Full width on mobile */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <Truck className="h-8 w-8 text-amber-500" />
-              <span className="text-xl font-bold">Tani Africa</span>
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <Truck className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-amber-500" />
+              <span className="text-lg sm:text-xl md:text-2xl font-bold">Tani Africa</span>
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed">Connecting cargo owners with reliable drivers across Africa. Safe, fast, and affordable logistics solutions.</p>
-            <div className="flex gap-4 mt-4">
-              {[FaFacebook, FaTwitter, FaInstagram, FaLinkedin].map((Icon, i) => (
-                <a key={i} href="#" className="text-gray-400 transition-all hover:text-amber-500 hover:scale-110 transform">
-                  <Icon className="h-5 w-5" />
+            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+              Connecting cargo owners with reliable drivers across Africa. Safe, fast, and affordable logistics solutions.
+            </p>
+            
+            {/* Social Icons - Horizontal scroll on very small screens */}
+            <div className="flex gap-3 sm:gap-4 mt-4 sm:mt-5 overflow-x-auto pb-1 sm:pb-0">
+              {[
+                { Icon: FaFacebook, label: 'Facebook' },
+                { Icon: FaTwitter, label: 'Twitter' },
+                { Icon: FaInstagram, label: 'Instagram' },
+                { Icon: FaLinkedin, label: 'LinkedIn' }
+              ].map(({ Icon, label }, i) => (
+                <a 
+                  key={i} 
+                  href="#" 
+                  aria-label={label}
+                  className="text-gray-400 transition-all hover:text-amber-500 hover:scale-110 transform flex-shrink-0"
+                >
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Links - Horizontal on mobile? No, better to keep vertical but compact */}
           <div>
-            <h3 className="text-base font-semibold uppercase tracking-wider text-gray-400 mb-4">Quick Links</h3>
-            <ul className="space-y-2">
+            <h3 className="text-sm sm:text-base font-semibold uppercase tracking-wider text-gray-400 mb-3 sm:mb-4">
+              Quick Links
+            </h3>
+            <ul className="space-y-1.5 sm:space-y-2">
               {quickLinks.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="group flex items-center text-sm text-gray-400 hover:text-amber-500 transition-colors">
-                    <ChevronRight className="mr-2 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1" />
-                    <span className="group-hover:translate-x-1 transition-transform">{link.label}</span>
+                  <Link 
+                    href={link.href} 
+                    className="group flex items-center text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+                  >
+                    <ChevronRight className="mr-1.5 sm:mr-2 h-2.5 w-2.5 sm:h-3 sm:w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1" />
+                    <span className="group-hover:translate-x-0.5 sm:group-hover:translate-x-1 transition-transform">
+                      {link.label}
+                    </span>
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Support Links */}
           <div>
-            <h3 className="text-base font-semibold uppercase tracking-wider text-gray-400 mb-4">Support</h3>
-            <ul className="space-y-2">
+            <h3 className="text-sm sm:text-base font-semibold uppercase tracking-wider text-gray-400 mb-3 sm:mb-4">
+              Support
+            </h3>
+            <ul className="space-y-1.5 sm:space-y-2">
               {supportLinks.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="group flex items-center text-sm text-gray-400 hover:text-amber-500 transition-colors">
-                    <ChevronRight className="mr-2 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1" />
-                    <span className="group-hover:translate-x-1 transition-transform">{link.label}</span>
+                  <Link 
+                    href={link.href} 
+                    className="group flex items-center text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+                  >
+                    <ChevronRight className="mr-1.5 sm:mr-2 h-2.5 w-2.5 sm:h-3 sm:w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1" />
+                    <span className="group-hover:translate-x-0.5 sm:group-hover:translate-x-1 transition-transform">
+                      {link.label}
+                    </span>
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Contact Info - Horizontal arrangement on mobile */}
           <div>
-            <h3 className="text-base font-semibold uppercase tracking-wider text-gray-400 mb-4">Contact Info</h3>
-            <ul className="space-y-3">
-              <li className="group flex items-start gap-3 text-sm text-gray-400 hover:text-amber-500 transition-colors">
-                <Mail className="mt-0.5 h-4 w-4 flex-shrink-0" /><span>support@taniafrica.com</span>
-              </li>
-              <li className="group flex items-center gap-3 text-sm text-gray-400 hover:text-amber-500 transition-colors">
-                <Phone className="h-4 w-4 flex-shrink-0" /><span>+254 700 123 456</span>
-              </li>
-              <li className="group flex items-start gap-3 text-sm text-gray-400 hover:text-amber-500 transition-colors">
-                <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span>Nairobi, Kenya</span>
-              </li>
-            </ul>
+            <h3 className="text-sm sm:text-base font-semibold uppercase tracking-wider text-gray-400 mb-3 sm:mb-4">
+              Contact Info
+            </h3>
+            <div className="flex flex-col gap-2 sm:gap-3">
+              <a 
+                href="mailto:support@taniafrica.com"
+                className="group flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+              >
+                <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="break-all">support@taniafrica.com</span>
+              </a>
+              
+              <a 
+                href="tel:+254700123456"
+                className="group flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+              >
+                <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>+254 700 123 456</span>
+              </a>
+              
+              <div className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400">
+                <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
+                <span>Nairobi, Kenya</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-800">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-center text-sm text-gray-400">
-            <p>&copy; {currentYear} Tani Africa. All rights reserved.</p>
-            <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-amber-500 transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-amber-500 transition-colors">Terms</Link>
-              <Link href="/cookies" className="hover:text-amber-500 transition-colors">Cookies</Link>
+        {/* Bottom Bar - Horizontal arrangement on mobile */}
+        <div className="mt-6 sm:mt-8 md:mt-12 pt-5 sm:pt-6 md:pt-8 border-t border-gray-800">
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-3 sm:gap-4">
+            
+            {/* Copyright - Smaller text on mobile */}
+            <p className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">
+              © {currentYear} Tani Africa. All rights reserved.
+            </p>
+            
+            {/* Legal Links - Horizontal arrangement */}
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
+              <Link 
+                href="/privacy" 
+                className="text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+              >
+                Privacy
+              </Link>
+              <Link 
+                href="/terms" 
+                className="text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+              >
+                Terms
+              </Link>
+              <Link 
+                href="/cookies" 
+                className="text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+              >
+                Cookies
+              </Link>
             </div>
           </div>
         </div>
