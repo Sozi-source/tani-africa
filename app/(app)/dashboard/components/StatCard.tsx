@@ -1,36 +1,33 @@
+// app/(app)/dashboard/components/StatCard.tsx - Compact Version
 'use client';
 
+import { LucideIcon } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
-import { TrendingUp } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   color: string;
-  trend?: number;
 }
 
-export function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, color }: StatCardProps) {
   return (
-    <Card hover className="h-full transition-all duration-300 hover:shadow-lg">
-      <CardBody className="p-3 sm:p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] sm:text-xs text-gray-500 mb-0.5 truncate">{title}</p>
-            <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">{value}</p>
-            {trend !== undefined && (
-              <div className="hidden sm:flex items-center gap-1 mt-1">
-                <TrendingUp className={`h-2.5 w-2.5 ${trend >= 0 ? 'text-green-500' : 'text-red-500'}`} />
-                <span className={`text-[10px] sm:text-xs ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {Math.abs(trend)}%
-                </span>
-              </div>
-            )}
+    <Card className="hover:shadow-md transition-all duration-200 border-0">
+      <CardBody className="p-2.5 xs:p-3 sm:p-4">
+        {/* Horizontal layout on mobile, vertical on larger */}
+        <div className="flex flex-row items-center justify-between sm:flex-col sm:items-start gap-2 sm:gap-0">
+          <div className="flex items-center gap-2 sm:gap-0 sm:flex-col sm:items-start">
+            <div className={`p-1.5 xs:p-2 rounded-xl bg-gradient-to-r ${color} bg-opacity-10`}>
+              <Icon className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 text-white" />
+            </div>
+            <span className="text-[9px] xs:text-[10px] sm:text-xs text-gray-400 font-medium sm:mt-1.5">
+              {title}
+            </span>
           </div>
-          <div className={`rounded-lg bg-gradient-to-r ${color} p-2 sm:p-2.5 flex-shrink-0`}>
-            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
-          </div>
+          <p className="text-base xs:text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
+            {value}
+          </p>
         </div>
       </CardBody>
     </Card>

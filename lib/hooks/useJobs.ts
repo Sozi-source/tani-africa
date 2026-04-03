@@ -3,7 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import apiClient, { extractArray } from '@/lib/api/client';
 import { Job } from '@/types';
 
-export function useJobs() {
+interface UseJobsReturn {
+  jobs: Job[];
+  loading: boolean;
+  error: string | null;
+  fetchJobs: () => Promise<void>;
+  refetch: () => Promise<void>;
+}
+
+export function useJobs(): UseJobsReturn {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,5 +45,11 @@ export function useJobs() {
     fetchJobs();
   }, [fetchJobs]);
 
-  return { jobs, loading, error, refetch: fetchJobs };
+  return { 
+    jobs, 
+    loading, 
+    error, 
+    fetchJobs,  
+    refetch: fetchJobs  
+  };
 }
