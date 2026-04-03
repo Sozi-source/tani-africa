@@ -1,3 +1,4 @@
+// lib/api/index.ts
 export { authAPI } from './auth';
 export { jobsAPI } from './jobs';
 export { vehiclesAPI } from './vehicles';

@@ -1,4 +1,4 @@
-// src/lib/api/admin.ts
+// lib/api/admin.ts
 import apiClient from './client';
 import { 
   AdminStats, 
@@ -13,57 +13,67 @@ import {
   UpdateTestimonialData,
 } from '@/types';
 
-// Helper function to extract array from response
+// Helper function to extract array from AxiosResponse
 function extractArray<T>(response: any): T[] {
-  if (Array.isArray(response)) {
-    return response;
+  if (!response) return [];
+  
+  // Get the actual data from the response
+  const data = response.data || response;
+  
+  if (Array.isArray(data)) {
+    return data;
   }
   
-  if (response && typeof response === 'object') {
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
-    if (Array.isArray(response.items)) {
-      return response.items;
-    }
-    if (Array.isArray(response.users)) {
-      return response.users;
-    }
-    if (Array.isArray(response.jobs)) {
-      return response.jobs;
-    }
-    if (Array.isArray(response.features)) {
-      return response.features;
-    }
-    if (Array.isArray(response.testimonials)) {
-      return response.testimonials;
-    }
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.results)) return data.results;
+    if (Array.isArray(data.users)) return data.users;
+    if (Array.isArray(data.jobs)) return data.jobs;
+    if (Array.isArray(data.features)) return data.features;
+    if (Array.isArray(data.testimonials)) return data.testimonials;
+    
+    // Try to find any array property
+    const arrayProperty = Object.values(data).find(Array.isArray);
+    if (arrayProperty) return arrayProperty as T[];
   }
   
   return [];
+}
+
+// Helper function to extract object from AxiosResponse
+function extractObject<T>(response: any): T | null {
+  if (!response) return null;
+  
+  const data = response.data || response;
+  
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    if (data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+      return data.data as T;
+    }
+    return data as T;
+  }
+  
+  return null;
 }
 
 export const adminAPI = {
   // ==================== DASHBOARD STATS ====================
   getStats: async (): Promise<AdminStats> => {
     const response = await apiClient.get('/admin/stats');
-    return response as unknown as AdminStats;
+    return extractObject<AdminStats>(response) || (response.data as AdminStats);
   },
 
   // ==================== DRIVER APPROVALS ====================
-  
-  // Get pending driver applications - uses /admin/drivers/pending
   getPendingDrivers: async (): Promise<PendingDriver[]> => {
     const response = await apiClient.get('/admin/drivers/pending');
     return extractArray<PendingDriver>(response);
   },
 
-  // Approve driver - uses POST /admin/drivers/{userId}/approve
   approveDriver: async (userId: string, notes?: string): Promise<void> => {
     await apiClient.post(`/admin/drivers/${userId}/approve`, { notes });
   },
 
-  // Reject driver - uses POST /admin/drivers/{userId}/reject
   rejectDriver: async (userId: string, reason: string): Promise<void> => {
     await apiClient.post(`/admin/drivers/${userId}/reject`, { reason });
   },
@@ -117,12 +127,12 @@ export const adminAPI = {
 
   createFeature: async (data: CreateFeatureData): Promise<Feature> => {
     const response = await apiClient.post('/admin/features', data);
-    return response as unknown as Feature;
+    return extractObject<Feature>(response) || (response.data as Feature);
   },
 
   updateFeature: async (id: string, data: UpdateFeatureData): Promise<Feature> => {
     const response = await apiClient.patch(`/admin/features/${id}`, data);
-    return response as unknown as Feature;
+    return extractObject<Feature>(response) || (response.data as Feature);
   },
 
   deleteFeature: async (id: string): Promise<void> => {
@@ -137,12 +147,12 @@ export const adminAPI = {
 
   createTestimonial: async (data: CreateTestimonialData): Promise<Testimonial> => {
     const response = await apiClient.post('/admin/testimonials', data);
-    return response as unknown as Testimonial;
+    return extractObject<Testimonial>(response) || (response.data as Testimonial);
   },
 
   updateTestimonial: async (id: string, data: UpdateTestimonialData): Promise<Testimonial> => {
     const response = await apiClient.patch(`/admin/testimonials/${id}`, data);
-    return response as unknown as Testimonial;
+    return extractObject<Testimonial>(response) || (response.data as Testimonial);
   },
 
   deleteTestimonial: async (id: string): Promise<void> => {

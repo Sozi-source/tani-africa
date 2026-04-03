@@ -1,19 +1,16 @@
+// app/auth/login/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Truck, Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle, Users, UserCircle, Shield } from 'lucide-react';
-import apiClient from '@/lib/api/client';
 import toast from 'react-hot-toast';
 
-type LoginCredentials = {
-  email: string;
-  password: string;
-};
-
+// Test accounts for development
 const TEST_ACCOUNTS = [
   {
     id: 1,
@@ -47,38 +44,23 @@ const TEST_ACCOUNTS = [
   }
 ];
 
-// ✅ Centralized auth storage — one source of truth
-function saveAuthData(accessToken: string, refreshToken: string | undefined, user: any) {
-  // LocalStorage
-  localStorage.setItem('token', accessToken);
-  localStorage.setItem('user', JSON.stringify(user));
-  if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-
-  // ✅ Cookie for middleware to read (not HttpOnly so JS can set it)
-  const maxAge = 60 * 60 * 24 * 7; // 7 days
-  document.cookie = `user_role=${user.role};path=/;max-age=${maxAge};SameSite=Lax`;
-}
-
-function getRoleRedirect(role: string): string {
-  switch (role?.toUpperCase()) {
-    case 'ADMIN':  return '/dashboard/admin';
-    case 'DRIVER': return '/dashboard/driver';
-    case 'CLIENT': return '/dashboard/client';
-    default:       return '/dashboard';
-  }
-}
-
 export default function LoginPage() {
+  const { login, loading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [showTestAccounts, setShowTestAccounts] = useState(false);
 
+  // Check URL params for messages
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -89,30 +71,44 @@ export default function LoginPage() {
 
     if (urlParams.get('session') === 'expired') {
       setSessionExpired(true);
-      // ✅ Clear stale auth data when session expires
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      document.cookie = 'user_role=;path=/;max-age=0';
+      setTimeout(() => setSessionExpired(false), 5000);
     }
 
+    // Clean URL
     if (urlParams.toString()) {
       window.history.replaceState({}, '', '/auth/login');
     }
   }, []);
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      // Middleware will handle redirect based on role
+      router.push('/dashboard');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
     setServerError('');
   };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    if (!formData.password) newErrors.password = 'Password is required';
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -126,57 +122,36 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!validate()) return;
-
+    
     setIsLoading(true);
     setServerError('');
-
+    
     try {
-      const response = await apiClient.post('/auth/login', {
+      await login({
         email: formData.email,
         password: formData.password,
       });
-
-      const responseData = response.data;
-
-      // ✅ Handle both flat and nested response shapes
-      const accessToken: string =
-        responseData.accessToken ||
-        responseData.token ||
-        responseData.data?.accessToken ||
-        responseData.data?.token;
-
-      const refreshToken: string | undefined =
-        responseData.refreshToken || responseData.data?.refreshToken;
-
-      const user =
-        responseData.user || responseData.data?.user;
-
-      if (!accessToken || !user) {
-        throw new Error('Invalid response from server. Please try again.');
-      }
-
-      if (!user.role) {
-        throw new Error('User role is missing. Please contact support.');
-      }
-
-      // ✅ Save everything in one place
-      saveAuthData(accessToken, refreshToken, user);
-
-      toast.success(`Welcome ${user.firstName || user.email}!`);
-
-      // ✅ Redirect directly to role dashboard — no root /dashboard hop
-      router.push(getRoleRedirect(user.role));
-
+      
+      // AuthContext handles the redirect via middleware
+      // The middleware will read the cookie and redirect to the appropriate dashboard
+      
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        'Login failed. Please check your credentials.';
-
+      console.error('Login error:', error);
+      
+      // Extract error message from various possible formats
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       setServerError(errorMessage);
-      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -184,21 +159,31 @@ export default function LoginPage() {
 
   const getColorClasses = (color: string) => {
     switch (color) {
-      case 'purple': return 'border-purple-200 bg-purple-50 hover:bg-purple-100';
-      case 'amber':  return 'border-amber-200 bg-amber-50 hover:bg-amber-100';
-      case 'blue':   return 'border-blue-200 bg-blue-50 hover:bg-blue-100';
-      default:       return 'border-gray-200 bg-gray-50 hover:bg-gray-100';
+      case 'purple':
+        return 'border-purple-200 bg-purple-50 hover:bg-purple-100';
+      case 'amber':
+        return 'border-amber-200 bg-amber-50 hover:bg-amber-100';
+      case 'blue':
+        return 'border-blue-200 bg-blue-50 hover:bg-blue-100';
+      default:
+        return 'border-gray-200 bg-gray-50 hover:bg-gray-100';
     }
   };
 
   const getIconColor = (color: string) => {
     switch (color) {
-      case 'purple': return 'text-purple-600';
-      case 'amber':  return 'text-amber-600';
-      case 'blue':   return 'text-blue-600';
-      default:       return 'text-gray-600';
+      case 'purple':
+        return 'text-purple-600';
+      case 'amber':
+        return 'text-amber-600';
+      case 'blue':
+        return 'text-blue-600';
+      default:
+        return 'text-gray-600';
     }
   };
+
+  const isLoadingState = isLoading || authLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center px-4 py-12">
@@ -216,7 +201,7 @@ export default function LoginPage() {
 
             {/* Success Message */}
             {showSuccess && (
-              <div className="mb-4 rounded-lg bg-green-50 p-3 border border-green-200">
+              <div className="mb-4 rounded-lg bg-green-50 p-3 border border-green-200 animate-in fade-in slide-in-from-top-2 duration-300">
                 <p className="text-sm text-green-700 text-center">
                   Registration successful! Please sign in.
                 </p>
@@ -225,7 +210,7 @@ export default function LoginPage() {
 
             {/* Session Expired Message */}
             {sessionExpired && (
-              <div className="mb-4 rounded-lg bg-yellow-50 p-3 border border-yellow-200">
+              <div className="mb-4 rounded-lg bg-yellow-50 p-3 border border-yellow-200 animate-in fade-in slide-in-from-top-2 duration-300">
                 <p className="text-sm text-yellow-700 text-center">
                   Your session has expired. Please sign in again.
                 </p>
@@ -234,7 +219,7 @@ export default function LoginPage() {
 
             {/* Server Error */}
             {serverError && (
-              <div className="mb-4 rounded-lg bg-red-50 p-3 border border-red-200 flex items-start gap-2">
+              <div className="mb-4 rounded-lg bg-red-50 p-3 border border-red-200 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700">{serverError}</p>
               </div>
@@ -253,12 +238,15 @@ export default function LoginPage() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`w-full rounded-lg border ${errors.email ? 'border-red-500' : 'border-gray-200'} py-2 pl-9 pr-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500`}
+                    className={`w-full rounded-lg border ${errors.email ? 'border-red-500' : 'border-gray-200'} py-2 pl-9 pr-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500`}
                     placeholder="you@example.com"
-                    disabled={isLoading}
+                    disabled={isLoadingState}
+                    autoComplete="email"
                   />
                 </div>
-                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+                {errors.email && (
+                  <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+                )}
               </div>
 
               <div>
@@ -272,39 +260,51 @@ export default function LoginPage() {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className={`w-full rounded-lg border ${errors.password ? 'border-red-500' : 'border-gray-200'} py-2 pl-9 pr-10 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500`}
+                    className={`w-full rounded-lg border ${errors.password ? 'border-red-500' : 'border-gray-200'} py-2 pl-9 pr-10 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500`}
                     placeholder="••••••••"
-                    disabled={isLoading}
+                    disabled={isLoadingState}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 focus:outline-none"
+                    disabled={isLoadingState}
                   >
-                    {showPassword
-                      ? <EyeOff className="h-4 w-4 text-gray-400" />
-                      : <Eye className="h-4 w-4 text-gray-400" />
-                    }
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    )}
                   </button>
                 </div>
-                {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
+                {errors.password && (
+                  <p className="mt-1 text-xs text-red-500">{errors.password}</p>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-gray-300" />
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" 
+                    disabled={isLoadingState}
+                  />
                   <span className="text-sm text-gray-600">Remember me</span>
                 </label>
-                <Link href="/auth/forgot-password" className="text-sm text-primary-600 hover:underline">
+                <Link 
+                  href="/auth/forgot-password" 
+                  className="text-sm text-primary-600 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
+                >
                   Forgot password?
                 </Link>
               </div>
 
-              <Button
-                type="submit"
-                fullWidth
-                loading={isLoading}
-                disabled={isLoading}
+              <Button 
+                type="submit" 
+                fullWidth 
+                loading={isLoadingState}
+                disabled={isLoadingState}
                 className="flex items-center justify-center gap-2"
               >
                 Sign In
@@ -317,7 +317,8 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowTestAccounts(!showTestAccounts)}
-                className="w-full text-center text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
+                className="w-full text-center text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-lg py-2"
+                disabled={isLoadingState}
               >
                 <Users className="h-4 w-4" />
                 {showTestAccounts ? 'Hide' : 'Show'} Test Accounts
@@ -326,7 +327,7 @@ export default function LoginPage() {
 
             {/* Test Accounts */}
             {showTestAccounts && (
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <p className="text-xs text-gray-500 text-center mb-2">Quick login with test accounts:</p>
                 {TEST_ACCOUNTS.map((account) => {
                   const Icon = account.icon;
@@ -335,7 +336,8 @@ export default function LoginPage() {
                       key={account.id}
                       type="button"
                       onClick={() => fillTestAccount(account.email, account.password)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${getColorClasses(account.color)}`}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${getColorClasses(account.color)} hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500`}
+                      disabled={isLoadingState}
                     >
                       <div className={`p-2 rounded-lg bg-white ${getIconColor(account.color)}`}>
                         <Icon className="h-5 w-5" />
@@ -362,7 +364,10 @@ export default function LoginPage() {
             {/* Sign up link */}
             <p className="mt-6 text-center text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link href="/auth/register" className="font-medium text-primary-600 hover:underline">
+              <Link 
+                href="/auth/register" 
+                className="font-medium text-primary-600 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
+              >
                 Sign up
               </Link>
             </p>
