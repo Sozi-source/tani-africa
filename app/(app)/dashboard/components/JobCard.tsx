@@ -1,26 +1,52 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { MapPin, Package } from 'lucide-react';
 import { Job } from '@/types';
-import { useRouter } from 'next/navigation';
 
-const JOB_STATUS_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
-  SUBMITTED: { label: 'Submitted', color: 'bg-yellow-100 text-yellow-800', icon: '📝' },
-  BIDDING: { label: 'Bidding', color: 'bg-blue-100 text-blue-800', icon: '💰' },
-  ACTIVE: { label: 'Active', color: 'bg-green-100 text-green-800', icon: '🚚' },
-  COMPLETED: { label: 'Completed', color: 'bg-gray-100 text-gray-800', icon: '✅' },
-  CANCELLED: { label: 'Cancelled', color: 'bg-red-100 text-red-800', icon: '❌' },
+/* ================= STATUS CONFIG ================= */
+
+const JOB_STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    badgeClass: string;
+  }
+> = {
+  SUBMITTED: {
+    label: 'Submitted',
+    badgeClass: 'bg-yellow-100 text-yellow-800',
+  },
+  BIDDING: {
+    label: 'Bidding',
+    badgeClass: 'bg-yellow-100 text-yellow-800',
+  },
+  ACTIVE: {
+    label: 'In Transit',
+    badgeClass: 'bg-green-100 text-green-700',
+  },
+  COMPLETED: {
+    label: 'Completed',
+    badgeClass: 'bg-gray-100 text-gray-700',
+  },
+  CANCELLED: {
+    label: 'Cancelled',
+    badgeClass: 'bg-red-100 text-red-700',
+  },
 };
 
 function getStatusConfig(status: string) {
-  return JOB_STATUS_CONFIG[status] || {
-    label: status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() || 'Unknown',
-    color: 'bg-gray-100 text-gray-800',
-    icon: '📦'
-  };
+  return (
+    JOB_STATUS_CONFIG[status] ?? {
+      label: status || 'Unknown',
+      badgeClass: 'bg-gray-100 text-gray-700',
+    }
+  );
 }
+
+/* ================= PROPS ================= */
 
 interface JobCardProps {
   job: Job;
@@ -28,77 +54,95 @@ interface JobCardProps {
   onPlaceBid?: (job: Job) => void;
 }
 
-export function JobCard({ job, showBidButton = false, onPlaceBid }: JobCardProps) {
-  const config = getStatusConfig(job.status);
+/* ================= COMPONENT ================= */
+
+export function JobCard({
+  job,
+  showBidButton = false,
+  onPlaceBid,
+}: JobCardProps) {
   const router = useRouter();
-  
-  const handleClick = () => {
+  const status = getStatusConfig(job.status);
+
+  const handleNavigate = () => {
     router.push(`/jobs/${job.id}`);
   };
-  
+
   return (
-    <Card hover className="cursor-pointer transition-all hover:shadow-md" onClick={handleClick}>
-      <CardBody className="p-3 sm:p-4">
-        <div className="space-y-2 sm:space-y-2.5">
-          {/* Top row with status and price */}
-          <div className="flex items-center justify-between flex-wrap gap-1.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] sm:text-xs font-medium ${config.color}`}>
-                <span>{config.icon}</span>
-                <span className="hidden xs:inline">{config.label}</span>
+    <Card
+      hover
+      className="cursor-pointer border border-gray-200"
+      onClick={handleNavigate}
+    >
+      <CardBody className="p-4 space-y-3">
+        {/* ===== TOP ROW ===== */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${status.badgeClass}`}
+            >
+              {status.label}
+            </span>
+
+            {job.bids && job.bids.length > 0 && (
+              <span className="text-xs text-gray-500">
+                {job.bids.length} bid{job.bids.length !== 1 ? 's' : ''}
               </span>
-              {job.bids && job.bids.length > 0 && (
-                <span className="text-[10px] sm:text-xs text-gray-500">
-                  {job.bids.length} bid{job.bids.length !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-            {job.price && (
-              <span className="text-xs sm:text-sm font-bold text-amber-600 whitespace-nowrap">
-                KES {job.price.toLocaleString()}
-              </span>
             )}
           </div>
-          
-          {/* Job details */}
-          <div>
-            <h3 className="font-semibold text-gray-900 text-xs sm:text-sm mb-1 line-clamp-2">
-              {job.title || `${job.pickUpLocation} → ${job.dropOffLocation}`}
-            </h3>
-            <div className="flex items-center text-[10px] sm:text-xs text-gray-500 mt-1">
-              <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
-              <span className="truncate">{job.pickUpLocation} → {job.dropOffLocation}</span>
-            </div>
-            {job.cargoType && (
-              <div className="flex items-center text-[10px] text-gray-400 mt-0.5">
-                <Package className="h-2.5 w-2.5 mr-1" />
-                <span>{job.cargoType}{job.cargoWeight ? ` • ${job.cargoWeight} kg` : ''}</span>
-              </div>
-            )}
+
+          {job.price && (
+            <span className="text-sm font-semibold text-red-600">
+              KES {job.price.toLocaleString()}
+            </span>
+          )}
+        </div>
+
+        {/* ===== TITLE ===== */}
+        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
+          {job.title || `${job.pickUpLocation} → ${job.dropOffLocation}`}
+        </h3>
+
+        {/* ===== LOCATIONS ===== */}
+        <div className="flex items-start gap-1 text-xs text-gray-500">
+          <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+          <span className="line-clamp-1">
+            {job.pickUpLocation} → {job.dropOffLocation}
+          </span>
+        </div>
+
+        {/* ===== CARGO ===== */}
+        {(job.cargoType || job.cargoWeight) && (
+          <div className="flex items-center gap-1 text-xs text-gray-400">
+            <Package className="h-3 w-3 flex-shrink-0" />
+            <span>
+              {job.cargoType}
+              {job.cargoWeight ? ` • ${job.cargoWeight} kg` : ''}
+            </span>
           </div>
-          
-          {/* Action button */}
-          <div className="flex justify-end pt-1">
-            {showBidButton && job.status === 'BIDDING' ? (
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  onPlaceBid?.(job); 
-                }}
-                className="w-full sm:w-auto text-xs sm:text-sm py-1.5 px-3"
-              >
-                Place Bid
-              </Button>
-            ) : !showBidButton && (
-              <Button size="sm" variant="outline" className="w-full sm:w-auto text-xs sm:text-sm py-1.5 px-3">
-                View Details
-              </Button>
-            )}
-          </div>
+        )}
+
+        {/* ===== FOOTER ===== */}
+        <div className="pt-2 flex justify-end">
+          {showBidButton && job.status === 'BIDDING' ? (
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlaceBid?.(job);
+              }}
+            >
+              Place Bid
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline">
+              View Details
+            </Button>
+          )}
         </div>
       </CardBody>
     </Card>
   );
 }
+``

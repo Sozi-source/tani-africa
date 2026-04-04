@@ -1,4 +1,3 @@
-// components/layout/PageLayout.tsx
 'use client';
 
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -27,28 +26,42 @@ export function PageLayout({
   containerClassName = '',
 }: PageLayoutProps) {
   return (
-    <div className={`min-h-screen bg-gray-50 ${containerClassName}`}>
+    <div className={`min-h-screen bg-[color:var(--color-gray-50)] ${containerClassName}`}>
+      
+      {/* ✅ SOFT NAIVAS BRAND STRIP */}
+      <div
+        className="h-2 w-full"
+        style={{
+          background: 'var(--gradient-primary)',
+        }}
+      />
+
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        
         {/* Back Navigation (mobile only) */}
         {showBackButton && (
           <BackNavigation label={backButtonLabel} href={backButtonHref} />
         )}
-        
+
         {/* Breadcrumb */}
         <Breadcrumb />
-        
-        {/* Page Header */}
-        <PageHeader
-          title={title}
-          subtitle={subtitle}
-          showBackButton={showBackButton}
-          backButtonLabel={backButtonLabel}
-          backButtonHref={backButtonHref}
-          actions={actions}
-        />
-        
+
+        {/* ✅ PAGE HEADER WRAPPER (BRAND-AWARE) */}
+        <div className="mt-3 mb-6 rounded-xl border border-gray-200 bg-white shadow-sm">
+          <PageHeader
+            title={title}
+            subtitle={subtitle}
+            showBackButton={showBackButton}
+            backButtonLabel={backButtonLabel}
+            backButtonHref={backButtonHref}
+            actions={actions}
+          />
+        </div>
+
         {/* Page Content */}
-        {children}
+        <div className="relative">
+          {children}
+        </div>
       </div>
     </div>
   );

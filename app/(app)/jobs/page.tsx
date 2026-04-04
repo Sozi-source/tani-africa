@@ -1,359 +1,197 @@
-// app/(app)/jobs/page.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/context/AuthContext';
 import { useJobs } from '@/lib/hooks/useJobs';
-import { useRouter } from 'next/navigation';
-import { 
-  Search, 
-  SlidersHorizontal, 
-  X, 
-  Package,
-  MapPin,
-  DollarSign,
-  Calendar,
-  Briefcase
-} from 'lucide-react';
+
+import { JobCard } from '@/components/jobs/JobCard';
 import { Button } from '@/components/ui/Button';
-import { Card, CardBody } from '@/components/ui/Card';
-import { DashboardLoader } from '../dashboard/components/DashboardLoader';
-import { DashboardError } from '../dashboard/components/DashboardError';
-import { Job } from '@/types';
+
+import { DashboardLoader } from '@/app/(app)/dashboard/components/DashboardLoader';
+import { DashboardError } from '@/app/(app)/dashboard/components/DashboardError';
+
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  Package,
+  Briefcase,
+  Clock,
+} from 'lucide-react';
 
 export default function JobsPage() {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { jobs: jobsData, loading: jobsLoading, error: jobsError, refetch } = useJobs();
-  
-  // Ensure jobs is always an array
-  const jobs = useMemo(() => Array.isArray(jobsData) ? jobsData : [], [jobsData]);
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    minPrice: '',
-    maxPrice: '',
-    cargoType: '',
-    location: ''
-  });
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { jobs = [], loading: jobsLoading, error, refetch } = useJobs();
 
-  // Redirect if not authenticated
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | string>('ALL');
+  const [showFilters, setShowFilters] = useState(false);
+
+  /* ================= AUTH GUARD ================= */
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login');
+      router.replace('/auth/login');
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Jobs page - jobsData:', jobsData);
-    console.log('Jobs page - is array:', Array.isArray(jobsData));
-    console.log('Jobs page - jobs count:', jobs.length);
-  }, [jobsData, jobs.length]);
+  /* ================= FILTERING ================= */
 
-  // Filter jobs
   const filteredJobs = useMemo(() => {
-    if (!jobs.length) return [];
-    
-    let filtered = [...jobs];
-    
-    // Only show BIDDING jobs for drivers
+    let list = Array.isArray(jobs) ? [...jobs] : [];
+
+    // Drivers only see bidding jobs
     if (user?.role === 'DRIVER') {
-      filtered = filtered.filter(job => job.status === 'BIDDING');
+      list = list.filter(j => j.status === 'BIDDING');
     }
-    
-    // Search term
+
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(job => 
-        job.title?.toLowerCase().includes(term) ||
-        job.pickUpLocation?.toLowerCase().includes(term) ||
-        job.dropOffLocation?.toLowerCase().includes(term) ||
-        job.description?.toLowerCase().includes(term)
+      const q = searchTerm.toLowerCase();
+      list = list.filter(j =>
+        j.title?.toLowerCase().includes(q) ||
+        j.pickUpLocation?.toLowerCase().includes(q) ||
+        j.dropOffLocation?.toLowerCase().includes(q)
       );
     }
-    
-    // Price range
-    if (filters.minPrice) {
-      filtered = filtered.filter(job => (job.price || 0) >= Number(filters.minPrice));
-    }
-    if (filters.maxPrice) {
-      filtered = filtered.filter(job => (job.price || 0) <= Number(filters.maxPrice));
-    }
-    
-    // Cargo type
-    if (filters.cargoType) {
-      filtered = filtered.filter(job => 
-        job.cargoType?.toLowerCase().includes(filters.cargoType.toLowerCase())
-      );
-    }
-    
-    // Location
-    if (filters.location) {
-      const loc = filters.location.toLowerCase();
-      filtered = filtered.filter(job => 
-        job.pickUpLocation?.toLowerCase().includes(loc) ||
-        job.dropOffLocation?.toLowerCase().includes(loc)
-      );
-    }
-    
-    return filtered;
-  }, [jobs, searchTerm, filters, user?.role]);
 
-  const addActiveFilter = (label: string) => {
-    if (!activeFilters.includes(label)) {
-      setActiveFilters([...activeFilters, label]);
+    if (statusFilter !== 'ALL') {
+      list = list.filter(j => j.status === statusFilter);
     }
-  };
 
-  const removeActiveFilter = (filter: string) => {
-    setActiveFilters(activeFilters.filter(f => f !== filter));
-    
-    if (filter.includes('Min Price')) setFilters(prev => ({ ...prev, minPrice: '' }));
-    if (filter.includes('Max Price')) setFilters(prev => ({ ...prev, maxPrice: '' }));
-    if (filter.includes('Cargo:')) setFilters(prev => ({ ...prev, cargoType: '' }));
-    if (filter.includes('Location:')) setFilters(prev => ({ ...prev, location: '' }));
-  };
+    return list;
+  }, [jobs, searchTerm, statusFilter, user?.role]);
 
-  const clearAllFilters = () => {
-    setFilters({ minPrice: '', maxPrice: '', cargoType: '', location: '' });
-    setSearchTerm('');
-    setActiveFilters([]);
-  };
+  /* ================= LOADING & ERROR ================= */
 
-  if (authLoading || jobsLoading) return <DashboardLoader />;
-  
-  if (!isAuthenticated) return null;
-  
-  if (jobsError) {
+  if (authLoading || jobsLoading) {
+    return <DashboardLoader />;
+  }
+
+  if (error) {
     return (
-      <DashboardError 
-        message={jobsError} 
-        onRetry={() => refetch()} 
+      <DashboardError
+        message={error}
+        onRetry={refetch}
       />
     );
   }
 
+  /* ================= UI ================= */
+
+  const statusOptions = [
+    { value: 'ALL', label: 'All', icon: Briefcase },
+    { value: 'SUBMITTED', label: 'Pending', icon: Clock },
+    { value: 'BIDDING', label: 'Bidding', icon: Package },
+    { value: 'ACTIVE', label: 'Active', icon: Package },
+    { value: 'COMPLETED', label: 'Completed', icon: Package },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-        
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Available Jobs</h1>
-          <p className="text-gray-600 mt-1">
+    <div className="min-h-screen bg-gray-50 px-4 py-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* ===== HEADER ===== */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Available Jobs
+          </h1>
+          <p className="mt-1 text-sm text-gray-600">
             Browse and bid on available transport jobs
           </p>
         </div>
 
-        {/* Search and Filter Bar */}
-        <div className="mb-6 space-y-4">
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search jobs by title, location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 focus:border-primary-500 focus:outline-none"
-              />
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-            </Button>
+        {/* ===== SEARCH + FILTER ===== */}
+        <div className="flex flex-col sm:flex-row gap-3">
+
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by title or location..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="
+                w-full rounded-lg border border-gray-300 bg-white
+                py-2.5 pl-9 pr-9 text-sm
+                focus:border-orange-600 focus:ring-2 focus:ring-orange-200
+              "
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                <X className="h-4 w-4 text-gray-400" />
+              </button>
+            )}
           </div>
 
-          {/* Active Filters */}
-          {activeFilters.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {activeFilters.map(filter => (
-                <span 
-                  key={filter}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-700 rounded-md text-xs"
+          {/* Filter toggle */}
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+          </Button>
+        </div>
+
+        {/* ===== FILTER CHIPS ===== */}
+        {showFilters && (
+          <div className="flex flex-wrap gap-2">
+            {statusOptions.map(opt => {
+              const Icon = opt.icon;
+              const active = statusFilter === opt.value;
+
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setStatusFilter(opt.value)}
+                  className={`
+                    flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+                    ${active
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-white border border-gray-200 text-gray-700'}
+                  `}
                 >
-                  {filter}
-                  <button onClick={() => removeActiveFilter(filter)}>
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-              <button 
-                onClick={clearAllFilters}
-                className="text-xs text-gray-500 hover:text-gray-700"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
+                  <Icon className="h-3.5 w-3.5" />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-          {/* Filters Panel */}
-          {showFilters && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Min Price (KES)
-                  </label>
-                  <input
-                    type="number"
-                    value={filters.minPrice}
-                    onChange={(e) => {
-                      setFilters({ ...filters, minPrice: e.target.value });
-                      if (e.target.value) addActiveFilter(`Min Price: ${e.target.value}`);
-                    }}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                    placeholder="Min"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Price (KES)
-                  </label>
-                  <input
-                    type="number"
-                    value={filters.maxPrice}
-                    onChange={(e) => {
-                      setFilters({ ...filters, maxPrice: e.target.value });
-                      if (e.target.value) addActiveFilter(`Max Price: ${e.target.value}`);
-                    }}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                    placeholder="Max"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cargo Type
-                  </label>
-                  <input
-                    type="text"
-                    value={filters.cargoType}
-                    onChange={(e) => {
-                      setFilters({ ...filters, cargoType: e.target.value });
-                      if (e.target.value) addActiveFilter(`Cargo: ${e.target.value}`);
-                    }}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                    placeholder="e.g., Electronics, Furniture"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={filters.location}
-                    onChange={(e) => {
-                      setFilters({ ...filters, location: e.target.value });
-                      if (e.target.value) addActiveFilter(`Location: ${e.target.value}`);
-                    }}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                    placeholder="City or region"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* ===== RESULT COUNT ===== */}
+        <p className="text-sm text-gray-500">
+          Showing {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
+        </p>
 
-        {/* Results Count */}
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">
-            Found {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        {/* Jobs Grid */}
+        {/* ===== CONTENT ===== */}
         {filteredJobs.length === 0 ? (
-          <Card>
-            <CardBody className="text-center py-12">
-              <Package className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-              <p className="text-gray-500">No jobs found matching your criteria</p>
-              <button 
-                onClick={clearAllFilters}
-                className="mt-3 text-sm text-primary-600 hover:underline"
-              >
-                Clear all filters
-              </button>
-            </CardBody>
-          </Card>
+          <div className="py-16 text-center">
+            <Package className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+            <h3 className="text-lg font-semibold text-gray-900">
+              No jobs found
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Try adjusting your search or filters
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredJobs.map((job) => (
+            {filteredJobs.map(job => (
               <JobCard key={job.id} job={job} />
             ))}
           </div>
         )}
+
       </div>
     </div>
-  );
-}
-
-// JobCard Component (inline or separate file)
-function JobCard({ job }: { job: Job }) {
-  const router = useRouter();
-  
-  return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/jobs/${job.id}`)}>
-      <CardBody className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="font-semibold text-gray-900 line-clamp-1">
-            {job.title || 'Transport Job'}
-          </h3>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            job.status === 'BIDDING' ? 'bg-blue-100 text-blue-700' :
-            job.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-            job.status === 'COMPLETED' ? 'bg-gray-100 text-gray-700' :
-            'bg-yellow-100 text-yellow-700'
-          }`}>
-            {job.status}
-          </span>
-        </div>
-        
-        <div className="space-y-2 text-sm">
-          <div className="flex items-start gap-2">
-            <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-gray-600 text-sm">From: {job.pickUpLocation}</p>
-              <p className="text-gray-600 text-sm">To: {job.dropOffLocation}</p>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-3">
-            {job.cargoType && (
-              <div className="flex items-center gap-1">
-                <Briefcase className="h-3 w-3 text-gray-400" />
-                <span className="text-xs text-gray-600">{job.cargoType}</span>
-              </div>
-            )}
-            {job.cargoWeight && (
-              <div className="flex items-center gap-1">
-                <Package className="h-3 w-3 text-gray-400" />
-                <span className="text-xs text-gray-600">{job.cargoWeight}kg</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1">
-              <DollarSign className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-600 font-medium">KES {job.price?.toLocaleString()}</span>
-            </div>
-            {job.scheduledDate && (
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3 text-gray-400" />
-                <span className="text-xs text-gray-600">
-                  {new Date(job.scheduledDate).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </CardBody>
-    </Card>
   );
 }

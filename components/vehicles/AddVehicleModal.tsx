@@ -22,6 +22,7 @@ interface AddVehicleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: CreateVehicleData) => Promise<void>;
+  isSubmitting: boolean;
 }
 
 export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({

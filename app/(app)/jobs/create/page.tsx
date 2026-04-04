@@ -1,42 +1,49 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useJobs } from '@/lib/hooks/useJobs';
-import { CreateJobModal } from '@/components/jobs/CreateJobModal';
+
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
+import { CreateJobModal } from '@/components/jobs/CreateJobModal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+
 import { CreateJobData } from '@/types';
 
 export default function CreateJobPage() {
   const router = useRouter();
-  const { createJob, loading: jobsLoading } = useJobs();
+
   const { user, loading: authLoading } = useAuth();
+  const { createJob, loading: jobsLoading } = useJobs();
+
   const [isOpen, setIsOpen] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect if not authenticated
+  /* ================= REDIRECTS ================= */
+
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/login');
+    if (authLoading) return;
+
+    if (!user) {
+      router.replace('/auth/login');
+      return;
+    }
+
+    if (user.role !== 'CLIENT') {
+      toast.error('Only clients can create jobs');
+      router.replace('/dashboard');
     }
   }, [authLoading, user, router]);
 
-  // Redirect if user is not a client
-  useEffect(() => {
-    if (!authLoading && user && user.role !== 'CLIENT') {
-      toast.error('Only clients can create jobs');
-      router.push('/dashboard');
-    }
-  }, [authLoading, user, router]);
+  /* ================= HANDLERS ================= */
 
   const handleSubmit = async (data: CreateJobData) => {
-    // Validate user exists before proceeding
     if (!user?.id) {
       toast.error('You must be logged in to create a job');
-      router.push('/auth/login');
+      router.replace('/auth/login');
       return;
     }
 
@@ -44,13 +51,14 @@ export default function CreateJobPage() {
     try {
       await createJob({
         ...data,
-        clientId: user.id, // Now guaranteed to be string
+        clientId: user.id,
       });
-      toast.success('Job created successfully!');
+
+      toast.success('Job created successfully');
       router.push('/jobs/my');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create job. Please try again.');
-      console.error('Error creating job:', error);
+      toast.error(error?.message || 'Failed to create job');
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +69,8 @@ export default function CreateJobPage() {
     router.push('/dashboard');
   };
 
-  // Show loading state
+  /* ================= LOADING ================= */
+
   if (authLoading || jobsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -70,10 +79,11 @@ export default function CreateJobPage() {
     );
   }
 
-  // Don't render if user is not a client or no user
   if (!user || user.role !== 'CLIENT') {
     return null;
   }
+
+  /* ================= RENDER ================= */
 
   return (
     <ProtectedRoute allowedRoles={['CLIENT']}>

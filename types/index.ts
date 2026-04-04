@@ -88,6 +88,9 @@ export interface AdminStats {
   totalDrivers: number;
   pendingDrivers: number;
   totalJobs: number;
+  pendingJobs: number;        // Added: Jobs awaiting approval
+  approvedJobs: number;       // Added: Approved jobs
+  rejectedJobs: number;       // Added: Rejected jobs
   activeJobs: number;
   completedJobs: number;
   totalRevenue: number;
@@ -119,14 +122,46 @@ export interface PendingDriver {
   notes?: string;
 }
 
+export interface PendingJob {
+  id: string;
+  title: string;
+  description?: string;
+  pickUpLocation: string;
+  dropOffLocation: string;
+  cargoType?: string;
+  cargoWeight?: number;
+  price: number;
+  status: JobStatus;
+  clientId: string;
+  client: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  };
+  createdAt: string;
+  scheduledDate?: string;
+  rejectionReason?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
 // ==================== JOB TYPES ====================
 
-export type JobStatus = 'SUBMITTED' | 'BIDDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export type JobStatus = 
+  | 'PENDING_APPROVAL'   // Client posted, waiting for admin approval
+  | 'APPROVED'           // Admin approved, ready for bidding
+  | 'REJECTED'           // Admin rejected, not visible to drivers
+  | 'BIDDING'            // Open for bids (after approval)
+  | 'ACTIVE'             // Job in progress (after bid accepted)
+  | 'COMPLETED'          // Job completed
+  | 'CANCELLED';         // Job cancelled
 
 export interface Job {
   id: string;
   status: JobStatus;
-  title?: string;
+  title: string;
   description?: string;
   pickUpLocation: string;
   dropOffLocation: string;
@@ -143,6 +178,11 @@ export interface Job {
   driverId?: string;
   driver?: User;
   bids?: Bid[];
+  rejectionReason?: string;     // Added: Reason if job is rejected
+  approvedBy?: string;          // Added: Admin who approved the job
+  approvedAt?: string;          // Added: When job was approved
+  reviewedBy?: string;          // Added: Admin who reviewed
+  reviewedAt?: string;          // Added: When job was reviewed
   createdAt: string;
   updatedAt: string;
 }
@@ -161,6 +201,7 @@ export interface CreateJobData {
 
 export interface UpdateJobData extends Partial<CreateJobData> {
   status?: JobStatus;
+  rejectionReason?: string;
 }
 
 // ==================== BID TYPES ====================
@@ -303,29 +344,92 @@ export interface Notification {
   bidId?: string;
 }
 
-// ==================== CONSTANTS ====================
+// ==================== JOB STATUS CONFIG ====================
 
-export const JOB_STATUS_CONFIG: Record<JobStatus, { label: string; color: string; icon: string }> = {
-  SUBMITTED: { label: 'Submitted', color: 'bg-yellow-100 text-yellow-800', icon: '📝' },
-  BIDDING: { label: 'Bidding Open', color: 'bg-blue-100 text-blue-800', icon: '💰' },
-  ACTIVE: { label: 'In Progress', color: 'bg-green-100 text-green-800', icon: '🚚' },
-  COMPLETED: { label: 'Completed', color: 'bg-gray-100 text-gray-800', icon: '✅' },
-  CANCELLED: { label: 'Cancelled', color: 'bg-red-100 text-red-800', icon: '❌' },
+export const JOB_STATUS_CONFIG: Record<JobStatus, { label: string; color: string; icon: string; description: string }> = {
+  PENDING_APPROVAL: { 
+    label: 'Pending Approval', 
+    color: 'bg-yellow-100 text-yellow-800', 
+    icon: '⏳',
+    description: 'Awaiting admin review'
+  },
+  APPROVED: { 
+    label: 'Approved', 
+    color: 'bg-green-100 text-green-800', 
+    icon: '✅',
+    description: 'Ready for bidding'
+  },
+  REJECTED: { 
+    label: 'Rejected', 
+    color: 'bg-red-100 text-red-800', 
+    icon: '❌',
+    description: 'Not approved'
+  },
+  BIDDING: { 
+    label: 'Bidding Open', 
+    color: 'bg-blue-100 text-blue-800', 
+    icon: '💰',
+    description: 'Drivers can place bids'
+  },
+  ACTIVE: { 
+    label: 'In Progress', 
+    color: 'bg-green-100 text-green-800', 
+    icon: '🚚',
+    description: 'Job in progress'
+  },
+  COMPLETED: { 
+    label: 'Completed', 
+    color: 'bg-gray-100 text-gray-800', 
+    icon: '✅',
+    description: 'Job completed'
+  },
+  CANCELLED: { 
+    label: 'Cancelled', 
+    color: 'bg-red-100 text-red-800', 
+    icon: '❌',
+    description: 'Job cancelled'
+  },
 };
 
-export const BID_STATUS_CONFIG: Record<BidStatus, { label: string; color: string }> = {
-  SUBMITTED: { label: 'Submitted', color: 'bg-yellow-100 text-yellow-800' },
-  PENDING: { label: 'Pending Review', color: 'bg-blue-100 text-blue-800' },
-  ACCEPTED: { label: 'Accepted', color: 'bg-green-100 text-green-800' },
-  REJECTED: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
-  EXPIRED: { label: 'Expired', color: 'bg-gray-100 text-gray-800' },
+// ==================== BID STATUS CONFIG ====================
+
+export const BID_STATUS_CONFIG: Record<BidStatus, { label: string; color: string; description: string }> = {
+  SUBMITTED: { 
+    label: 'Submitted', 
+    color: 'bg-yellow-100 text-yellow-800',
+    description: 'Bid submitted'
+  },
+  PENDING: { 
+    label: 'Pending Review', 
+    color: 'bg-blue-100 text-blue-800',
+    description: 'Awaiting client decision'
+  },
+  ACCEPTED: { 
+    label: 'Accepted', 
+    color: 'bg-green-100 text-green-800',
+    description: 'Bid accepted'
+  },
+  REJECTED: { 
+    label: 'Rejected', 
+    color: 'bg-red-100 text-red-800',
+    description: 'Bid not selected'
+  },
+  EXPIRED: { 
+    label: 'Expired', 
+    color: 'bg-gray-100 text-gray-800',
+    description: 'Bid has expired'
+  },
 };
+
+// ==================== ROLES ====================
 
 export const ROLES = {
   ADMIN: 'ADMIN',
   CLIENT: 'CLIENT',
   DRIVER: 'DRIVER',
 } as const;
+
+// ==================== VEHICLE CATEGORIES ====================
 
 export const VEHICLE_CATEGORIES = {
   C1_LIGHT_TRUCK: 'Light Truck (up to 7.5 tons)',
@@ -334,3 +438,30 @@ export const VEHICLE_CATEGORIES = {
   CD_HEAVY_GOODS_VEHICLE: 'Heavy Goods Vehicle',
   B2_LIGHT_MANUAL_VEHICLE: 'Light Manual Vehicle',
 } as const;
+
+// ==================== HELPER FUNCTIONS ====================
+
+export const isJobVisibleToDrivers = (status: JobStatus): boolean => {
+  return ['APPROVED', 'BIDDING', 'ACTIVE'].includes(status);
+};
+
+export const isJobPendingApproval = (status: JobStatus): boolean => {
+  return status === 'PENDING_APPROVAL';
+};
+
+export const isJobApproved = (status: JobStatus): boolean => {
+  return status === 'APPROVED' || status === 'BIDDING';
+};
+
+export const canDriverBid = (status: JobStatus): boolean => {
+  return status === 'APPROVED' || status === 'BIDDING';
+};
+
+export const getJobStatusFlow = (): { from: JobStatus; to: JobStatus[] }[] => {
+  return [
+    { from: 'PENDING_APPROVAL', to: ['APPROVED', 'REJECTED'] },
+    { from: 'APPROVED', to: ['BIDDING', 'CANCELLED'] },
+    { from: 'BIDDING', to: ['ACTIVE', 'CANCELLED'] },
+    { from: 'ACTIVE', to: ['COMPLETED', 'CANCELLED'] },
+  ];
+};

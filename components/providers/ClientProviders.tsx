@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from 'react-hot-toast';
-import { Header } from '@/components/layout/Header';
+import { Header } from '@/components/layout/UnifiedHeader';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { PageLoader } from '@/components/ui/PageLoader';

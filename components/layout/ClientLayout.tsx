@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import { Header } from './Header';
+import { Header } from './UnifiedHeader';
 import { Footer } from './Footer';
 import { MobileBottomNav } from './MobileBottomNav';
 import { AuthProvider } from '@/context/AuthContext';

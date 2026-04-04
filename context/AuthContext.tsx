@@ -124,13 +124,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    authAPI.logout();
-    setUser(null);
-    setToken(null);
-    toast.success('Logged out successfully');
-    window.location.href = '/auth/login';
-  };
+ // context/AuthContext.tsx - Updated logout function
+
+const logout = () => {
+  // Clear everything synchronously
+  if (typeof window !== 'undefined') {
+    // Clear localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
+    
+    // Clear sessionStorage
+    sessionStorage.clear();
+    
+    // Clear all cookies
+    document.cookie.split(';').forEach(cookie => {
+      const [name] = cookie.split('=');
+      if (name.trim()) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      }
+    });
+    
+    // Clear any cached data
+    if (window.caches) {
+      caches.keys().then(keys => {
+        keys.forEach(key => caches.delete(key));
+      });
+    }
+  }
+  
+  // Clear state
+  setUser(null);
+  setToken(null);
+  
+  // Force immediate redirect without history
+  window.location.replace('/auth/login');
+};
 
   const value: AuthContextType = {
     user,

@@ -1,230 +1,128 @@
+// app/(app)/admin/drivers/[id]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useAdminUsers, useDriverApprovals } from '@/lib/hooks/useAdmin';
+import { adminAPI } from '@/lib/api/admin';
+import { useAdminUsers } from '@/lib/hooks/useAdmin';
+import { useVehicles } from '@/lib/hooks/useVehicles';
 import { useJobs } from '@/lib/hooks/useJobs';
 import { useBids } from '@/lib/hooks/useBids';
-import { useVehicles } from '@/lib/hooks/useVehicles';
+import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute';
 import { Card, CardBody } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Button } from '@/components/ui/Button';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
-import { BackNavigation } from '@/components/ui/BackNavigation';
-import Link from 'next/link';
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  Shield,
-  Calendar,
-  Truck,
-  Package,
-  DollarSign,
-  Star,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  FileText,
-  Award,
-  Clock,
-  TrendingUp,
-  MapPin,
-  Car,
-  Gavel,
-  Eye,
-  Edit,
-  RefreshCw,
-  Ban,
-  UserCheck,
-  MessageSquare,
-  Info,
-  ChevronRight
+import { 
+  ArrowLeft, User, Mail, Phone, Shield, Calendar, Truck, 
+  CheckCircle, XCircle, AlertCircle, Car, FileText, 
+  Clock, Award, Star, MapPin, Package, Gavel,
+  DollarSign, TrendingUp, UserCheck, UserX
 } from 'lucide-react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 
-interface DriverStats {
-  totalJobs: number;
-  completedJobs: number;
-  cancelledJobs: number;
-  totalEarnings: number;
-  averageRating: number;
-  totalBids: number;
-  acceptedBids: number;
-  successRate: number;
-}
-
-export default function AdminDriverDetailsPage() {
+export default function DriverDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, isAdmin, isAuthenticated, loading: authLoading } = useAuth();
-  const { users, loading: usersLoading, updateUserStatus, updateUserRole } = useAdminUsers();
-  const { approveDriver, rejectDriver } = useDriverApprovals();
-  const { jobs, loading: jobsLoading } = useJobs();
-  const { bids, loading: bidsLoading } = useBids();
-  const { vehicles, loading: vehiclesLoading } = useVehicles(params.id as string);
+  const driverId = params.id as string;
+  
+  const { users, updateUserStatus } = useAdminUsers();
+  const { vehicles } = useVehicles(driverId);
+  const { jobs } = useJobs();
+  const { bids } = useBids();
   
   const [driver, setDriver] = useState<any>(null);
   const [driverJobs, setDriverJobs] = useState<any[]>([]);
   const [driverBids, setDriverBids] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'jobs' | 'bids' | 'vehicles' | 'activity'>('jobs');
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'bids' | 'vehicles'>('overview');
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  const driverId = params.id as string;
-
   useEffect(() => {
-    if (driverId && users.length > 0) {
-      const foundDriver = users.find(u => u.id === driverId);
-      setDriver(foundDriver);
+    if (users.length > 0) {
+      const found = users.find(u => u.id === driverId);
+      setDriver(found);
       
-      const driverJobsData = jobs.filter(job => job.driverId === driverId);
-      setDriverJobs(driverJobsData);
+      // Filter jobs and bids for this driver
+      const jobsData = Array.isArray(jobs) ? jobs : [];
+      const bidsData = Array.isArray(bids) ? bids : [];
       
-      const driverBidsData = bids.filter(bid => bid.driverId === driverId);
-      setDriverBids(driverBidsData);
-      
+      setDriverJobs(jobsData.filter(j => j.driverId === driverId));
+      setDriverBids(bidsData.filter(b => b.driverId === driverId));
       setLoading(false);
     }
   }, [driverId, users, jobs, bids]);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login');
-    } else if (!authLoading && !isAdmin) {
-      router.push('/dashboard');
-    }
-  }, [authLoading, isAuthenticated, isAdmin, router]);
-
-  const handleApproveDriver = async () => {
-    setIsUpdating(true);
+  const handleApprove = async () => {
+    setProcessing(true);
     try {
-      await approveDriver(driverId);
-      toast.success(`${driver?.firstName} ${driver?.lastName} has been approved as a driver`);
-      window.location.reload();
-    } catch (error) {
-      toast.error('Failed to approve driver');
+      await adminAPI.approveDriver(driverId);
+      toast.success('Driver approved successfully');
+      router.push('/admin/drivers/pending');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to approve driver');
     } finally {
-      setIsUpdating(false);
+      setProcessing(false);
     }
   };
 
-  const handleRejectDriver = async () => {
+  const handleReject = async () => {
     if (!rejectionReason.trim()) {
       toast.error('Please provide a reason for rejection');
       return;
     }
-    
-    setIsUpdating(true);
+    setProcessing(true);
     try {
-      await rejectDriver(driverId, rejectionReason);
-      toast.success(`Driver application rejected`);
-      setShowRejectModal(false);
-      window.location.reload();
-    } catch (error) {
-      toast.error('Failed to reject driver');
+      await adminAPI.rejectDriver(driverId, rejectionReason);
+      toast.success('Driver rejected');
+      router.push('/admin/drivers/pending');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to reject driver');
     } finally {
-      setIsUpdating(false);
+      setProcessing(false);
+      setShowRejectModal(false);
     }
   };
 
-  const handleSuspendDriver = async () => {
-    if (confirm(`Are you sure you want to suspend ${driver?.firstName} ${driver?.lastName}?`)) {
-      setIsUpdating(true);
-      try {
-        await updateUserStatus(driverId, false);
-        toast.success('Driver suspended successfully');
-        window.location.reload();
-      } catch (error) {
-        toast.error('Failed to suspend driver');
-      } finally {
-        setIsUpdating(false);
-      }
+  const handleSuspend = async () => {
+    if (!confirm(`Are you sure you want to suspend ${driver?.firstName} ${driver?.lastName}?`)) return;
+    setProcessing(true);
+    try {
+      await updateUserStatus(driverId, false);
+      toast.success('Driver suspended');
+      window.location.reload();
+    } catch (err: any) {
+      toast.error('Failed to suspend driver');
+    } finally {
+      setProcessing(false);
     }
   };
 
-  const handleActivateDriver = async () => {
-    setIsUpdating(true);
+  const handleActivate = async () => {
+    setProcessing(true);
     try {
       await updateUserStatus(driverId, true);
-      toast.success('Driver activated successfully');
+      toast.success('Driver activated');
       window.location.reload();
-    } catch (error) {
+    } catch (err: any) {
       toast.error('Failed to activate driver');
     } finally {
-      setIsUpdating(false);
+      setProcessing(false);
     }
   };
 
-  const calculateStats = (): DriverStats => {
-    const completedJobs = driverJobs.filter(job => job.status === 'COMPLETED');
-    const cancelledJobs = driverJobs.filter(job => job.status === 'CANCELLED');
-    const totalEarnings = completedJobs.reduce((sum, job) => sum + (job.price || 0), 0);
-    const acceptedBids = driverBids.filter(bid => bid.status === 'ACCEPTED');
-    const successRate = driverBids.length > 0 
-      ? (acceptedBids.length / driverBids.length) * 100 
-      : 0;
-    
-    return {
-      totalJobs: driverJobs.length,
-      completedJobs: completedJobs.length,
-      cancelledJobs: cancelledJobs.length,
-      totalEarnings,
-      averageRating: driver?.rating || 0,
-      totalBids: driverBids.length,
-      acceptedBids: acceptedBids.length,
-      successRate: Math.round(successRate),
-    };
-  };
+  // Calculate stats
+  const completedJobs = driverJobs.filter(j => j.status === 'COMPLETED');
+  const totalEarnings = completedJobs.reduce((sum, j) => sum + (j.price || 0), 0);
+  const acceptedBids = driverBids.filter(b => b.status === 'ACCEPTED');
+  const successRate = driverBids.length > 0 
+    ? Math.round((acceptedBids.length / driverBids.length) * 100) 
+    : 0;
 
-  const stats = calculateStats();
-
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { label: string; color: string; bgColor: string }> = {
-      ACTIVE: { label: 'Active', color: 'text-green-800', bgColor: 'bg-green-50' },
-      SUSPENDED: { label: 'Suspended', color: 'text-red-800', bgColor: 'bg-red-50' },
-      PENDING: { label: 'Pending', color: 'text-yellow-800', bgColor: 'bg-yellow-50' },
-      APPROVED: { label: 'Approved', color: 'text-green-800', bgColor: 'bg-green-50' },
-      REJECTED: { label: 'Rejected', color: 'text-red-800', bgColor: 'bg-red-50' },
-    };
-    const cfg = config[status] || { label: status, color: 'text-gray-800', bgColor: 'bg-gray-50' };
+  if (loading) {
     return (
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cfg.bgColor} ${cfg.color}`}>
-        {cfg.label}
-      </span>
-    );
-  };
-
-  const getJobStatusBadge = (status: string) => {
-    const config: Record<string, { label: string; color: string; bgColor: string }> = {
-      SUBMITTED: { label: 'Submitted', color: 'text-yellow-800', bgColor: 'bg-yellow-50' },
-      BIDDING: { label: 'Bidding', color: 'text-blue-800', bgColor: 'bg-blue-50' },
-      ACTIVE: { label: 'Active', color: 'text-green-800', bgColor: 'bg-green-50' },
-      COMPLETED: { label: 'Completed', color: 'text-gray-800', bgColor: 'bg-gray-50' },
-      CANCELLED: { label: 'Cancelled', color: 'text-red-800', bgColor: 'bg-red-50' },
-    };
-    return config[status] || { label: status, color: 'text-gray-800', bgColor: 'bg-gray-50' };
-  };
-
-  const getBidStatusBadge = (status: string) => {
-    const config: Record<string, { label: string; color: string; bgColor: string }> = {
-      SUBMITTED: { label: 'Submitted', color: 'text-yellow-800', bgColor: 'bg-yellow-50' },
-      PENDING: { label: 'Pending', color: 'text-blue-800', bgColor: 'bg-blue-50' },
-      ACCEPTED: { label: 'Accepted', color: 'text-green-800', bgColor: 'bg-green-50' },
-      REJECTED: { label: 'Rejected', color: 'text-red-800', bgColor: 'bg-red-50' },
-      EXPIRED: { label: 'Expired', color: 'text-gray-800', bgColor: 'bg-gray-50' },
-    };
-    return config[status] || { label: status, color: 'text-gray-800', bgColor: 'bg-gray-50' };
-  };
-
-  if (loading || usersLoading || jobsLoading || bidsLoading || vehiclesLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <div className="flex justify-center items-center min-h-[60vh]">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -232,13 +130,14 @@ export default function AdminDriverDetailsPage() {
 
   if (!driver) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 py-8 text-center">
-          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-          <h2 className="text-xl font-semibold text-gray-900">Driver Not Found</h2>
-          <p className="mt-2 text-sm text-gray-600">The driver you're looking for doesn't exist.</p>
-          <Link href="/admin/drivers">
-            <Button className="mt-4">Back to Drivers</Button>
+      <div className="flex justify-center items-center min-h-[60vh] p-4">
+        <div className="text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-3" />
+          <p className="text-gray-500">Driver not found</p>
+          <Link href="/admin/drivers/pending">
+            <button className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg">
+              Back to Drivers
+            </button>
           </Link>
         </div>
       </div>
@@ -246,495 +145,421 @@ export default function AdminDriverDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-        
-        {/* Breadcrumb */}
-        <Breadcrumb />
-        
-        {/* Back Navigation (mobile only) */}
-        <BackNavigation label="Back to Drivers" href="/admin/drivers" />
-
-        {/* Header */}
-        <div className="mb-5 sm:mb-6 md:mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
-                {driver.firstName} {driver.lastName}
-              </h1>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                {getStatusBadge(driver.isActive ? 'ACTIVE' : 'SUSPENDED')}
-                {driver.approvalStatus === false && driver.role === 'DRIVER' && (
-                  <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-800">
-                    Pending Approval
-                  </span>
-                )}
-                <span className="text-xs text-gray-500 flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Joined: {new Date(driver.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-            
-            {/* Action Buttons - Horizontal scroll on mobile */}
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {driver.approvalStatus === false && (
-                <>
-                  <Button
-                    onClick={handleApproveDriver}
-                    disabled={isUpdating}
-                    variant="primary"
-                    size="sm"
-                    className="whitespace-nowrap bg-green-600 hover:bg-green-700"
-                  >
-                    <UserCheck className="mr-1 h-3.5 w-3.5" />
-                    Approve
-                  </Button>
-                  <Button
-                    onClick={() => setShowRejectModal(true)}
-                    disabled={isUpdating}
-                    variant="danger"
-                    size="sm"
-                    className="whitespace-nowrap"
-                  >
-                    <XCircle className="mr-1 h-3.5 w-3.5" />
-                    Reject
-                  </Button>
-                </>
-              )}
-              {driver.isActive ? (
-                <Button
-                  onClick={handleSuspendDriver}
-                  disabled={isUpdating}
-                  variant="danger"
-                  size="sm"
-                  className="whitespace-nowrap bg-orange-600 hover:bg-orange-700"
-                >
-                  <Ban className="mr-1 h-3.5 w-3.5" />
-                  Suspend
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleActivateDriver}
-                  disabled={isUpdating}
-                  variant="primary"
-                  size="sm"
-                  className="whitespace-nowrap bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                  Activate
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.location.reload()}
-                disabled={isUpdating}
-                className="whitespace-nowrap"
-              >
-                <RefreshCw className="mr-1 h-3.5 w-3.5" />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Two Column Layout - Stack on mobile */}
-        <div className="flex flex-col lg:flex-row gap-5 sm:gap-6">
+    <RoleBasedRoute allowedRoles={['ADMIN']}>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           
-          {/* Left Column - Driver Info */}
-          <div className="lg:w-1/3 space-y-4 sm:space-y-5">
-            {/* Profile Card */}
-            <Card>
-              <CardBody className="p-4 sm:p-5">
-                <div className="text-center mb-4 sm:mb-5">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-2xl sm:text-3xl font-bold text-white shadow-lg mb-3">
-                    {driver.firstName?.[0]}{driver.lastName?.[0]}
+          {/* Back Button */}
+          <Link href="/admin/drivers/pending" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Pending Drivers
+          </Link>
+
+          {/* Driver Profile Card */}
+          <Card className="mb-6">
+            <CardBody className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center gap-6">
+                {/* Avatar */}
+                <div className="w-24 h-24 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg mx-auto md:mx-0">
+                  {driver.firstName?.[0]}{driver.lastName?.[0]}
+                </div>
+                
+                {/* Driver Info */}
+                <div className="flex-1 text-center md:text-left">
+                  <h1 className="text-2xl font-bold text-gray-900">{driver.firstName} {driver.lastName}</h1>
+                  <p className="text-gray-500">{driver.email}</p>
+                  {driver.phone && <p className="text-sm text-gray-500 mt-1">{driver.phone}</p>}
+                  <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                      Driver
+                    </span>
+                    {driver.isActive ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">
+                        <CheckCircle className="h-3 w-3" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">
+                        <XCircle className="h-3 w-3" />
+                        Inactive
+                      </span>
+                    )}
+                    {driver.approvalStatus === false && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs">
+                        <Clock className="h-3 w-3" />
+                        Pending Approval
+                      </span>
+                    )}
                   </div>
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">{driver.firstName} {driver.lastName}</h2>
-                  <p className="text-xs sm:text-sm text-gray-500 break-all">{driver.email}</p>
-                  {driver.phone && (
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1 flex items-center justify-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {driver.phone}
-                    </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 justify-center md:justify-end">
+                  {driver.approvalStatus === false ? (
+                    <>
+                      <button
+                        onClick={() => setShowRejectModal(true)}
+                        disabled={processing}
+                        className="px-5 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={handleApprove}
+                        disabled={processing}
+                        className="px-5 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        {processing ? 'Processing...' : 'Approve Driver'}
+                      </button>
+                    </>
+                  ) : driver.isActive ? (
+                    <button
+                      onClick={handleSuspend}
+                      disabled={processing}
+                      className="px-5 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                    >
+                      Suspend Driver
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleActivate}
+                      disabled={processing}
+                      className="px-5 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                    >
+                      Activate Driver
+                    </button>
                   )}
                 </div>
+              </div>
+            </CardBody>
+          </Card>
 
-                <div className="border-t border-gray-100 pt-3 sm:pt-4 space-y-2 sm:space-y-3">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-gray-500">Role</span>
-                    <span className="font-medium text-gray-900 capitalize">{driver.role}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-gray-500">Driver ID</span>
-                    <span className="font-mono text-gray-600">{driver.id.slice(0, 8)}...</span>
-                  </div>
-                  {driver.drivingLicense && (
-                    <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span className="text-gray-500">License</span>
-                      <span className="font-medium text-gray-900">{driver.drivingLicense}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-gray-500">Member Since</span>
-                    <span className="text-gray-600">{new Date(driver.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
+          {/* Tabs */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="flex gap-4 overflow-x-auto">
+              {[
+                { id: 'overview', label: 'Overview', icon: User },
+                { id: 'jobs', label: 'Jobs', icon: Package, count: driverJobs.length },
+                { id: 'bids', label: 'Bids', icon: Gavel, count: driverBids.length },
+                { id: 'vehicles', label: 'Vehicles', icon: Car, count: vehicles.length },
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                      isActive
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span className="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs">
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
 
-            {/* Stats Card */}
-            <Card>
-              <CardBody className="p-4 sm:p-5">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                  <TrendingUp className="h-4 w-4 text-primary-500" />
-                  Performance Stats
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Total Jobs</span>
-                    <span className="font-semibold text-gray-900">{stats.totalJobs}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Completed</span>
-                    <span className="font-semibold text-green-600">{stats.completedJobs}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Cancelled</span>
-                    <span className="font-semibold text-red-600">{stats.cancelledJobs}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Earnings</span>
-                    <span className="font-semibold text-primary-600">KES {stats.totalEarnings.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Bids</span>
-                    <span className="font-semibold text-gray-900">{stats.totalBids}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Accepted</span>
-                    <span className="font-semibold text-green-600">{stats.acceptedBids}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Success Rate</span>
-                    <span className={`font-semibold ${stats.successRate >= 70 ? 'text-green-600' : stats.successRate >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {stats.successRate}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm">
-                    <span className="text-gray-600">Rating</span>
-                    <span className="font-semibold text-yellow-600 flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-current" />
-                      {stats.averageRating}/5
-                    </span>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-
-            {/* Vehicles Card */}
-            {vehicles.length > 0 && (
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Personal Information */}
               <Card>
-                <CardBody className="p-4 sm:p-5">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                    <Car className="h-4 w-4 text-primary-500" />
-                    Vehicles ({vehicles.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {vehicles.map((vehicle) => (
-                      <div key={vehicle.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900 truncate">{vehicle.plateNumber}</p>
-                          <p className="text-xs text-gray-500 capitalize truncate">
-                            {vehicle.category?.replace(/_/g, ' ').toLowerCase()}
-                          </p>
-                        </div>
-                        {vehicle.isApproved ? (
-                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 ml-2" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0 ml-2" />
-                        )}
+                <CardBody className="p-5">
+                  <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <User className="h-5 w-5 text-orange-500" />
+                    Personal Information
+                  </h2>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Full Name</span>
+                      <span className="font-medium">{driver.firstName} {driver.lastName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Email</span>
+                      <span className="font-medium">{driver.email}</span>
+                    </div>
+                    {driver.phone && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Phone</span>
+                        <span className="font-medium">{driver.phone}</span>
                       </div>
-                    ))}
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Member Since</span>
+                      <span className="font-medium">{new Date(driver.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {driver.drivingLicense && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">License Number</span>
+                        <span className="font-medium">{driver.drivingLicense}</span>
+                      </div>
+                    )}
                   </div>
                 </CardBody>
               </Card>
-            )}
-          </div>
 
-          {/* Right Column - Activity Tabs */}
-          <div className="lg:w-2/3">
-            {/* Tabs - Horizontal scroll on mobile */}
-            <div className="border-b border-gray-200 mb-4 sm:mb-5 overflow-x-auto">
-              <nav className="flex gap-1 min-w-max">
-                {[
-                  { id: 'jobs', label: 'Jobs', icon: Package, count: driverJobs.length },
-                  { id: 'bids', label: 'Bids', icon: Gavel, count: driverBids.length },
-                  { id: 'vehicles', label: 'Vehicles', icon: Car, count: vehicles.length },
-                  { id: 'activity', label: 'Activity', icon: Clock, count: null },
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                        isActive
-                          ? 'border-primary-500 text-primary-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      {tab.label}
-                      {tab.count !== null && tab.count > 0 && (
-                        <span className={`ml-1 rounded-full px-1.5 py-0.5 text-xs ${
-                          isActive ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {tab.count}
+              {/* Performance Stats */}
+              <Card>
+                <CardBody className="p-5">
+                  <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-orange-500" />
+                    Performance Stats
+                  </h2>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Total Jobs</span>
+                      <span className="font-bold text-lg">{driverJobs.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Completed Jobs</span>
+                      <span className="font-bold text-green-600">{completedJobs.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Total Earnings</span>
+                      <span className="font-bold text-orange-600">KES {totalEarnings.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Total Bids</span>
+                      <span className="font-bold">{driverBids.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Accepted Bids</span>
+                      <span className="font-bold text-green-600">{acceptedBids.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Success Rate</span>
+                      <span className={`font-bold ${successRate >= 70 ? 'text-green-600' : successRate >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {successRate}%
+                      </span>
+                    </div>
+                    {driver.rating && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Rating</span>
+                        <span className="font-bold text-yellow-600 flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-yellow-400" />
+                          {driver.rating}/5
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
+                      </div>
+                    )}
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Documents */}
+              <Card className="md:col-span-2">
+                <CardBody className="p-5">
+                  <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-orange-500" />
+                    Documents
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-3 bg-gray-50 rounded-lg text-center">
+                      <Shield className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm font-medium">License</p>
+                      <p className="text-xs text-gray-500">{driver.drivingLicense || 'Not provided'}</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg text-center">
+                      <Car className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Vehicle Registration</p>
+                      <p className="text-xs text-gray-500">{vehicles.length} vehicle(s)</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg text-center">
+                      <CheckCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Background Check</p>
+                      <p className="text-xs text-green-600">Verified</p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
             </div>
+          )}
 
-            {/* Jobs Tab */}
-            {activeTab === 'jobs' && (
-              <div className="space-y-3 sm:space-y-4">
-                {driverJobs.length === 0 ? (
-                  <div className="bg-white rounded-xl p-8 sm:p-12 text-center border border-gray-100">
-                    <Package className="mx-auto mb-3 h-10 w-10 sm:h-12 sm:w-12 text-gray-300" />
-                    <p className="text-sm text-gray-500">No jobs assigned to this driver</p>
-                  </div>
-                ) : (
-                  driverJobs.map((job) => {
-                    const statusConfig = getJobStatusBadge(job.status);
-                    return (
-                      <Card key={job.id} hover>
-                        <CardBody className="p-3 sm:p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>
-                                  {statusConfig.label}
-                                </span>
-                                <span className="text-[10px] text-gray-400">
-                                  {new Date(job.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1 line-clamp-2">
-                                {job.title || `Job #${job.id.slice(-8)}`}
-                              </h4>
-                              <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
-                                <MapPin className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{job.pickUpLocation} → {job.dropOffLocation}</span>
-                              </div>
-                              {job.price && (
-                                <p className="text-sm sm:text-base font-bold text-primary-600">
-                                  KES {job.price.toLocaleString()}
-                                </p>
-                              )}
-                            </div>
-                            <Link href={`/admin/jobs/${job.id}`} className="self-start sm:self-center">
-                              <Button size="sm" variant="outline" className="text-xs">
-                                <Eye className="mr-1 h-3.5 w-3.5" />
-                                View
-                              </Button>
-                            </Link>
+          {/* Jobs Tab */}
+          {activeTab === 'jobs' && (
+            <div className="space-y-4">
+              {driverJobs.length === 0 ? (
+                <Card>
+                  <CardBody className="p-12 text-center">
+                    <Package className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                    <p className="text-gray-500">No jobs assigned to this driver</p>
+                  </CardBody>
+                </Card>
+              ) : (
+                driverJobs.map(job => (
+                  <Card key={job.id} hover>
+                    <CardBody className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                              job.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {job.status}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(job.createdAt).toLocaleDateString()}
+                            </span>
                           </div>
-                        </CardBody>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            )}
+                          <h3 className="font-semibold text-gray-900">{job.title || 'Transport Job'}</h3>
+                          <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                            <MapPin className="h-3 w-3" />
+                            {job.pickUpLocation} → {job.dropOffLocation}
+                          </div>
+                          <p className="font-bold text-orange-600 mt-2">KES {job.price?.toLocaleString()}</p>
+                        </div>
+                        <Link href={`/admin/jobs/${job.id}`}>
+                          <button className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">
+                            View
+                          </button>
+                        </Link>
+                      </div>
+                    </CardBody>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
 
-            {/* Bids Tab */}
-            {activeTab === 'bids' && (
-              <div className="space-y-3 sm:space-y-4">
-                {driverBids.length === 0 ? (
-                  <div className="bg-white rounded-xl p-8 sm:p-12 text-center border border-gray-100">
-                    <Gavel className="mx-auto mb-3 h-10 w-10 sm:h-12 sm:w-12 text-gray-300" />
-                    <p className="text-sm text-gray-500">No bids placed by this driver</p>
-                  </div>
-                ) : (
-                  driverBids.map((bid) => {
-                    const statusConfig = getBidStatusBadge(bid.status);
-                    return (
-                      <Card key={bid.id} hover>
-                        <CardBody className="p-3 sm:p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>
-                                  {statusConfig.label}
-                                </span>
-                                <span className="text-[10px] text-gray-400">
-                                  {new Date(bid.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1 line-clamp-2">
-                                {bid.job?.title || `Job #${bid.jobId.slice(-8)}`}
-                              </h4>
-                              <p className="text-xs sm:text-sm text-gray-600">
-                                Bid: <span className="font-semibold text-primary-600">KES {bid.price.toLocaleString()}</span>
-                              </p>
-                              {bid.message && (
-                                <p className="mt-2 text-xs text-gray-500 italic line-clamp-2">"{bid.message}"</p>
-                              )}
-                            </div>
-                            <Link href={`/jobs/${bid.jobId}`} className="self-start sm:self-center">
-                              <Button size="sm" variant="outline" className="text-xs">
-                                <Eye className="mr-1 h-3.5 w-3.5" />
-                                View Job
-                              </Button>
-                            </Link>
+          {/* Bids Tab */}
+          {activeTab === 'bids' && (
+            <div className="space-y-4">
+              {driverBids.length === 0 ? (
+                <Card>
+                  <CardBody className="p-12 text-center">
+                    <Gavel className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                    <p className="text-gray-500">No bids placed by this driver</p>
+                  </CardBody>
+                </Card>
+              ) : (
+                driverBids.map(bid => (
+                  <Card key={bid.id} hover>
+                    <CardBody className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              bid.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                              bid.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {bid.status}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(bid.createdAt).toLocaleDateString()}
+                            </span>
                           </div>
-                        </CardBody>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {/* Vehicles Tab */}
-            {activeTab === 'vehicles' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {vehicles.length === 0 ? (
-                  <div className="col-span-full bg-white rounded-xl p-8 sm:p-12 text-center border border-gray-100">
-                    <Car className="mx-auto mb-3 h-10 w-10 sm:h-12 sm:w-12 text-gray-300" />
-                    <p className="text-sm text-gray-500">No vehicles registered</p>
-                  </div>
-                ) : (
-                  vehicles.map((vehicle) => (
-                    <Card key={vehicle.id} hover>
-                      <CardBody className="p-3 sm:p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Car className="h-4 w-4 sm:h-5 sm:w-5 text-primary-500" />
-                            <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{vehicle.plateNumber}</h4>
-                          </div>
-                          {vehicle.isApproved ? (
-                            <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
-                          ) : (
-                            <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 flex-shrink-0" />
+                          <h3 className="font-semibold text-gray-900">Bid: KES {bid.price?.toLocaleString()}</h3>
+                          <p className="text-sm text-gray-500">on Job #{bid.jobId.slice(-8)}</p>
+                          {bid.message && (
+                            <p className="text-sm text-gray-600 mt-2 italic">"{bid.message}"</p>
                           )}
                         </div>
-                        <p className="text-xs sm:text-sm text-gray-600 capitalize truncate">
-                          {vehicle.category?.replace(/_/g, ' ').toLowerCase()}
-                        </p>
-                        {vehicle.capacity && (
-                          <p className="text-xs text-gray-500 mt-1">Capacity: {vehicle.capacity} tons</p>
-                        )}
-                      </CardBody>
-                    </Card>
-                  ))
-                )}
-              </div>
-            )}
+                        <Link href={`/jobs/${bid.jobId}`}>
+                          <button className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">
+                            View Job
+                          </button>
+                        </Link>
+                      </div>
+                    </CardBody>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
 
-            {/* Activity Tab */}
-            {activeTab === 'activity' && (
-              <div className="space-y-3">
-                {[...driverJobs, ...driverBids].sort((a, b) => 
-                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                ).slice(0, 10).length === 0 ? (
-                  <div className="bg-white rounded-xl p-8 sm:p-12 text-center border border-gray-100">
-                    <Clock className="mx-auto mb-3 h-10 w-10 sm:h-12 sm:w-12 text-gray-300" />
-                    <p className="text-sm text-gray-500">No recent activity</p>
-                  </div>
-                ) : (
-                  [...driverJobs, ...driverBids]
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .slice(0, 10)
-                    .map((item) => {
-                      const isJob = 'pickUpLocation' in item;
-                      const statusConfig = isJob ? getJobStatusBadge(item.status) : getBidStatusBadge(item.status);
-                      return (
-                        <Card key={item.id} hover>
-                          <CardBody className="p-3 sm:p-4">
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0">
-                                {isJob ? (
-                                  <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-                                ) : (
-                                  <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>
-                                    {statusConfig.label}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400">
-                                    {new Date(item.createdAt).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <p className="font-medium text-gray-900 text-xs sm:text-sm mb-1 line-clamp-2">
-                                  {isJob 
-                                    ? (item.title || `Job #${item.id.slice(-8)}`)
-                                    : `Bid on ${item.job?.title || `Job #${item.jobId.slice(-8)}`}`
-                                  }
-                                </p>
-                                <p className="text-xs font-semibold text-primary-600">
-                                  KES {item.price?.toLocaleString()}
-                                </p>
-                              </div>
-                              <Link href={isJob ? `/admin/jobs/${item.id}` : `/jobs/${item.jobId}`}>
-                                <Button size="sm" variant="ghost" className="p-1">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                            </div>
-                          </CardBody>
-                        </Card>
-                      );
-                    })
-                )}
-              </div>
-            )}
-          </div>
+          {/* Vehicles Tab */}
+          {activeTab === 'vehicles' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {vehicles.length === 0 ? (
+                <Card className="md:col-span-2">
+                  <CardBody className="p-12 text-center">
+                    <Car className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                    <p className="text-gray-500">No vehicles registered</p>
+                  </CardBody>
+                </Card>
+              ) : (
+                vehicles.map(vehicle => (
+                  <Card key={vehicle.id} hover>
+                    <CardBody className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2">
+                          <Car className="h-5 w-5 text-orange-500" />
+                          <h3 className="font-semibold text-gray-900">{vehicle.plateNumber}</h3>
+                        </div>
+                        {vehicle.isApproved ? (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-yellow-500" />
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 capitalize">{vehicle.category?.replace(/_/g, ' ').toLowerCase()}</p>
+                      {vehicle.capacity && (
+                        <p className="text-sm text-gray-500 mt-1">Capacity: {vehicle.capacity} tons</p>
+                      )}
+                    </CardBody>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Rejection Modal */}
+      {/* Reject Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Reject Driver Application</h3>
-            <p className="text-xs sm:text-sm text-gray-500 mb-4">
-              Please provide a reason for rejecting {driver?.firstName} {driver?.lastName}'s application.
+          <div className="bg-white rounded-xl max-w-md w-full p-5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <XCircle className="h-6 w-6 text-red-500" />
+              <h3 className="text-lg font-semibold text-gray-900">Reject Driver Application</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to reject <strong>{driver?.firstName} {driver?.lastName}</strong>'s application?
             </p>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Reason for rejection..."
-              rows={4}
-              className="w-full rounded-lg border border-gray-200 p-3 text-sm focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-200"
-            />
-            <div className="mt-5 flex gap-3">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reason for rejection
+              </label>
+              <textarea
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Please provide a reason..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+              />
+            </div>
+            <div className="flex gap-3">
               <button
-                onClick={() => setShowRejectModal(false)}
-                className="flex-1 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectionReason('');
+                }}
+                className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
-                onClick={handleRejectDriver}
-                disabled={!rejectionReason.trim() || isUpdating}
-                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleReject}
+                disabled={!rejectionReason.trim() || processing}
+                className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 disabled:opacity-50"
               >
-                {isUpdating ? 'Rejecting...' : 'Reject'}
+                {processing ? 'Processing...' : 'Reject'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </RoleBasedRoute>
   );
 }

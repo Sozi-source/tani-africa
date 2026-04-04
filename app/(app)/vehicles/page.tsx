@@ -4,20 +4,24 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useVehicles } from '@/lib/hooks/useVehicles';
 import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute';
 import { VehicleList } from '@/components/vehicles/VehicleList';
+import apiClient from '@/lib/api/client';
 
 export default function VehiclesPage() {
   const { user } = useAuth();
-  const { vehicles, loading, error, deleteVehicle, fetchVehicles } = useVehicles(user?.id);
+  const { vehicles, loading, error, refetch } = useVehicles(user?.id);
 
   const handleDelete = async (id: string) => {
-    await deleteVehicle(id);
-    await fetchVehicles();
+    await apiClient.delete(`/vehicles/${id}`);
+    await refetch();
   };
 
   return (
     <RoleBasedRoute allowedRoles={['DRIVER', 'ADMIN']}>
       <div className="container-custom py-8">
-        <h1 className="mb-6 text-3xl font-bold text-gray-900">My Fleet</h1>
+        <h1 className="mb-6 text-3xl font-bold text-gray-900">
+          My Fleet
+        </h1>
+
         <VehicleList
           vehicles={vehicles}
           loading={loading}

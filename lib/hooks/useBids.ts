@@ -1,50 +1,84 @@
-// lib/hooks/useBids.ts
-import { useState, useEffect, useCallback } from 'react';
-import apiClient from '@/lib/api/client';
-import { Bid } from '@/types';
+'use client';
 
-interface UseBidsReturn {
+import { useCallback, useEffect, useState } from 'react';
+import { Bid, CreateBidData } from '@/types';
+import { bidsAPI } from '@/lib/api/bids';
+
+export interface UseBidsReturn {
   bids: Bid[];
   loading: boolean;
   error: string | null;
+
   refetch: () => Promise<void>;
+  placeBid: (data: CreateBidData) => Promise<Bid>;
+  updateBidStatus: (id: string, status: string) => Promise<Bid>;
+
+  getBidsByJob: (jobId: string) => Promise<Bid[]>;
+  getBidsByDriver: (driverId: string) => Promise<Bid[]>;
 }
+
+/* ================= HOOK ================= */
 
 export function useBids(): UseBidsReturn {
   const [bids, setBids] = useState<Bid[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchBids = useCallback(async () => {
+  /* ---------- FETCH ALL ---------- */
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      const response = await apiClient.get('/bids');
-      
-      let bidsArray: Bid[] = [];
-      const data = response.data;
-      
-      if (Array.isArray(data)) {
-        bidsArray = data;
-      } else if (data && typeof data === 'object') {
-        if (Array.isArray(data.data)) bidsArray = data.data;
-        else if (Array.isArray(data.bids)) bidsArray = data.bids;
-        else if (Array.isArray(data.items)) bidsArray = data.items;
-      }
-      
-      setBids(bidsArray);
-    } catch (err: any) {
-      console.error('Error fetching bids:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to load bids');
-      setBids([]);
+      const data = await bidsAPI.getAll();
+      setBids(data);
+    } catch (err) {
+      setError('Failed to load bids');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchBids();
-  }, [fetchBids]);
+    fetchAll();
+  }, [fetchAll]);
 
-  return { bids, loading, error, refetch: fetchBids };
+  /* ---------- ACTIONS ---------- */
+
+  const placeBid = async (data: CreateBidData) => {
+    const bid = await bidsAPI.create(data);
+    setBids(prev => [bid, ...prev]);
+    return bid;
+  };
+
+  const updateBidStatus = async (id: string, status: string) => {
+    const updated = await bidsAPI.updateStatus(id, status);
+    setBids(prev =>
+      prev.map(b => (b.id === id ? updated : b))
+    );
+    return updated;
+  };
+
+  /* ---------- QUERY HELPERS ---------- */
+
+  const getBidsByJob = async (jobId: string) => {
+    return await bidsAPI.getByJob(jobId);
+  };
+
+  const getBidsByDriver = async (driverId: string) => {
+    return await bidsAPI.getByDriver(driverId);
+  };
+
+  return {
+    bids,
+    loading,
+    error,
+
+    refetch: fetchAll,
+    placeBid,
+    updateBidStatus,
+
+    getBidsByJob,
+    getBidsByDriver,
+  };
 }

@@ -1,4 +1,3 @@
-// components/layout/Footer.tsx
 'use client';
 
 import Link from 'next/link';
@@ -23,146 +22,131 @@ export function Footer() {
   ];
 
   return (
-    <footer className="bg-gray-900 text-white mt-auto">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
-        
-        {/* Main Footer Content - Mobile First Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 md:gap-10">
-          
-          {/* Brand Section - Full width on mobile */}
+    <footer className="bg-[#0B0F14] text-gray-300 mt-auto border-t border-white/5">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
+
+        {/* ===================== MAIN GRID ===================== */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+
+          {/* BRAND */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2 mb-3 sm:mb-4">
-              <Truck className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-amber-500" />
-              <span className="text-lg sm:text-xl md:text-2xl font-bold">Tani Africa</span>
+            <div className="flex items-center gap-2 mb-4">
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: 'var(--gradient-primary)' }}
+              >
+                <Truck className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white">
+                Tani Africa
+              </span>
             </div>
-            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-              Connecting cargo owners with reliable drivers across Africa. Safe, fast, and affordable logistics solutions.
+
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Connecting cargo owners with reliable drivers across Africa.
+              Secure, fast, and affordable logistics you can trust.
             </p>
-            
-            {/* Social Icons - Horizontal scroll on very small screens */}
-            <div className="flex gap-3 sm:gap-4 mt-4 sm:mt-5 overflow-x-auto pb-1 sm:pb-0">
-              {[
-                { Icon: FaFacebook, label: 'Facebook' },
-                { Icon: FaTwitter, label: 'Twitter' },
-                { Icon: FaInstagram, label: 'Instagram' },
-                { Icon: FaLinkedin, label: 'LinkedIn' }
-              ].map(({ Icon, label }, i) => (
-                <a 
-                  key={i} 
-                  href="#" 
-                  aria-label={label}
-                  className="text-gray-400 transition-all hover:text-amber-500 hover:scale-110 transform flex-shrink-0"
+
+            {/* SOCIALS */}
+            <div className="flex gap-4 mt-5">
+              {[FaFacebook, FaTwitter, FaInstagram, FaLinkedin].map((Icon, i) => (
+                <a
+                  key={i}
+                  href="#"
+                  className="text-gray-400 transition hover:text-[color:var(--color-primary-500)] hover:scale-110"
                 >
-                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <Icon className="h-5 w-5" />
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Quick Links - Horizontal on mobile? No, better to keep vertical but compact */}
+          {/* QUICK LINKS */}
           <div>
-            <h3 className="text-sm sm:text-base font-semibold uppercase tracking-wider text-gray-400 mb-3 sm:mb-4">
+            <h3 className="text-sm font-semibold tracking-wide text-gray-400 mb-4 uppercase">
               Quick Links
             </h3>
-            <ul className="space-y-1.5 sm:space-y-2">
-              {quickLinks.map((link) => (
+            <ul className="space-y-2">
+              {quickLinks.map(link => (
                 <li key={link.href}>
-                  <Link 
-                    href={link.href} 
-                    className="group flex items-center text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+                  <Link
+                    href={link.href}
+                    className="group flex items-center gap-2 text-sm text-gray-400 hover:text-[color:var(--color-secondary-500)] transition"
                   >
-                    <ChevronRight className="mr-1.5 sm:mr-2 h-2.5 w-2.5 sm:h-3 sm:w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1" />
-                    <span className="group-hover:translate-x-0.5 sm:group-hover:translate-x-1 transition-transform">
-                      {link.label}
-                    </span>
+                    <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition" />
+                    <span>{link.label}</span>
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Support Links */}
+          {/* SUPPORT */}
           <div>
-            <h3 className="text-sm sm:text-base font-semibold uppercase tracking-wider text-gray-400 mb-3 sm:mb-4">
+            <h3 className="text-sm font-semibold tracking-wide text-gray-400 mb-4 uppercase">
               Support
             </h3>
-            <ul className="space-y-1.5 sm:space-y-2">
-              {supportLinks.map((link) => (
+            <ul className="space-y-2">
+              {supportLinks.map(link => (
                 <li key={link.href}>
-                  <Link 
-                    href={link.href} 
-                    className="group flex items-center text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+                  <Link
+                    href={link.href}
+                    className="group flex items-center gap-2 text-sm text-gray-400 hover:text-[color:var(--color-secondary-500)] transition"
                   >
-                    <ChevronRight className="mr-1.5 sm:mr-2 h-2.5 w-2.5 sm:h-3 sm:w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1" />
-                    <span className="group-hover:translate-x-0.5 sm:group-hover:translate-x-1 transition-transform">
-                      {link.label}
-                    </span>
+                    <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition" />
+                    <span>{link.label}</span>
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Contact Info - Horizontal arrangement on mobile */}
+          {/* CONTACT */}
           <div>
-            <h3 className="text-sm sm:text-base font-semibold uppercase tracking-wider text-gray-400 mb-3 sm:mb-4">
-              Contact Info
+            <h3 className="text-sm font-semibold tracking-wide text-gray-400 mb-4 uppercase">
+              Contact
             </h3>
-            <div className="flex flex-col gap-2 sm:gap-3">
-              <a 
+            <div className="space-y-3 text-sm">
+              <a
                 href="mailto:support@taniafrica.com"
-                className="group flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+                className="flex items-center gap-3 hover:text-[color:var(--color-secondary-500)] transition"
               >
-                <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="break-all">support@taniafrica.com</span>
+                <Mail className="h-4 w-4" />
+                support@taniafrica.com
               </a>
-              
-              <a 
+
+              <a
                 href="tel:+254700123456"
-                className="group flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
+                className="flex items-center gap-3 hover:text-[color:var(--color-secondary-500)] transition"
               >
-                <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span>+254 700 123 456</span>
+                <Phone className="h-4 w-4" />
+                +254 700 123 456
               </a>
-              
-              <div className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400">
-                <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
-                <span>Nairobi, Kenya</span>
+
+              <div className="flex items-start gap-3 text-gray-400">
+                <MapPin className="h-4 w-4 mt-0.5" />
+                Nairobi, Kenya
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Bar - Horizontal arrangement on mobile */}
-        <div className="mt-6 sm:mt-8 md:mt-12 pt-5 sm:pt-6 md:pt-8 border-t border-gray-800">
-          <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-3 sm:gap-4">
-            
-            {/* Copyright - Smaller text on mobile */}
-            <p className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">
-              © {currentYear} Tani Africa. All rights reserved.
-            </p>
-            
-            {/* Legal Links - Horizontal arrangement */}
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
-              <Link 
-                href="/privacy" 
-                className="text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
-              >
-                Privacy
-              </Link>
-              <Link 
-                href="/terms" 
-                className="text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
-              >
-                Terms
-              </Link>
-              <Link 
-                href="/cookies" 
-                className="text-xs sm:text-sm text-gray-400 hover:text-amber-500 transition-colors"
-              >
-                Cookies
-              </Link>
-            </div>
+        {/* ===================== BOTTOM BAR ===================== */}
+        <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs sm:text-sm text-gray-400">
+            © {currentYear} Tani Africa. All rights reserved.
+          </p>
+
+          <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm">
+            <Link href="/privacy" className="hover:text-[color:var(--color-secondary-500)]">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-[color:var(--color-secondary-500)]">
+              Terms
+            </Link>
+            <Link href="/cookies" className="hover:text-[color:var(--color-secondary-500)]">
+              Cookies
+            </Link>
           </div>
         </div>
       </div>

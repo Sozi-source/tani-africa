@@ -1,4 +1,3 @@
-// app/(app)/dashboard/components/QuickActionCard.tsx
 'use client';
 
 import Link from 'next/link';
@@ -11,26 +10,61 @@ interface QuickActionCardProps {
   icon: ReactNode;
   title: string;
   description: string;
-  iconBgColor: string;
-  iconColor: string;
+  iconBgColor: string; // kept for compatibility
+  iconColor: string;  // kept for compatibility
 }
 
-export function QuickActionCard({ href, icon, title, description, iconBgColor, iconColor }: QuickActionCardProps) {
+export function QuickActionCard({
+  href,
+  icon,
+  title,
+  description,
+  iconBgColor,
+  iconColor,
+}: QuickActionCardProps) {
   return (
-    <Link href={href} className="block group">
-      <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0">
-        <CardBody className="p-5 sm:p-6 md:p-7">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 sm:gap-5 md:gap-6">
-              <div className={`p-3 sm:p-4 rounded-xl ${iconBgColor} group-hover:scale-105 transition-transform duration-300`}>
-                <div className={`${iconColor}`}>{icon}</div>
+    <Link href={href} className="block focus:outline-none">
+      <Card
+        hover
+        className="
+          border border-gray-200
+          transition-shadow
+          cursor-pointer
+        "
+      >
+        <CardBody className="p-4 sm:p-5 md:p-6">
+          <div className="flex items-center justify-between gap-4">
+            
+            {/* Icon + Text */}
+            <div className="flex items-center gap-4 min-w-0">
+              
+              {/* Icon */}
+              <div
+                className={`
+                  flex h-11 w-11 sm:h-12 sm:w-12
+                  items-center justify-center
+                  rounded-xl
+                  ${iconBgColor}
+                `}
+              >
+                <div className={`${iconColor}`}>
+                  {icon}
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-base sm:text-lg md:text-xl">{title}</h3>
-                <p className="text-sm sm:text-base text-gray-500 mt-1 sm:mt-1.5">{description}</p>
+
+              {/* Text */}
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                  {title}
+                </h3>
+                <p className="mt-0.5 text-xs sm:text-sm text-gray-500 line-clamp-2">
+                  {description}
+                </p>
               </div>
             </div>
-            <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-amber-600 group-hover:translate-x-2 transition-all duration-300" />
+
+            {/* Arrow */}
+            <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
           </div>
         </CardBody>
       </Card>

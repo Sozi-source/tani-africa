@@ -1,13 +1,12 @@
-// components/layout/AppLayout.tsx
+// app/(app)/layout.tsx
 'use client';
 
-import { useState } from 'react';
-import { Header } from '@/components/layout/Header';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
-import {DashboardFooter} from '@/components/layout/DashboardFooter';
-import { MobileHeader } from '@/components/layout/MobileHeader';
-import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
+import { DashboardFooter } from '@/components/layout/DashboardFooter';
+import { PageLoader } from '@/components/ui/PageLoader';
+import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 
 export default function AppLayout({
@@ -15,51 +14,81 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { initializing } = useAuth();
   const pathname = usePathname();
-  const isAuthPage = pathname?.includes('/auth/');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Auth pages (login/register) - no sidebar or header
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Handle loading state
+  useEffect(() => {
+    // Show loader while auth is initializing
+    if (!initializing) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => setIsLoading(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [initializing]);
+
+  // Calculate sidebar width
+  const sidebarWidth = isMobile
+    ? 0
+    : isSidebarCollapsed
+    ? 72
+    : 280;
+
+  // Don't show sidebar on auth pages
+  const isAuthPage = pathname?.includes('/auth/');
+  
   if (isAuthPage) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-        {children}
-      </div>
-    );
+    return <>{children}</>;
   }
 
-  // Dashboard pages - with sidebar and header
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar - fixed on desktop, slide-in on mobile */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col lg:ml-0">
-        {/* Desktop Header - hidden on mobile, visible on lg screens */}
-        <div className="hidden lg:block">
-          <Header onMenuClick={() => setIsSidebarOpen(true)} />
+    <>
+      {/* Page Loader - Shows while loading */}
+      <PageLoader isLoading={isLoading} />
+
+      {/* Main Layout - Hidden while loading */}
+      <div className={`min-h-screen bg-gray-50 ${isLoading ? 'hidden' : 'block'}`}>
+        {/* Sidebar */}
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          onCollapseChange={setIsSidebarCollapsed}
+        />
+
+        {/* Content wrapper */}
+        <div
+          className="min-h-screen flex flex-col transition-all duration-300 ease-in-out"
+          style={{ marginLeft: sidebarWidth }}
+        >
+          {/* Fixed Header */}
+          <UnifiedHeader
+            onMenuClick={() => setIsSidebarOpen(true)}
+            sidebarWidth={sidebarWidth}
+          />
+
+          {/* Main Content */}
+          <main className="pt-16 flex-1">
+            <div className="px-4 py-6 sm:px-6 lg:px-8">
+              {children}
+            </div>
+          </main>
+
+          {/* Dashboard Footer */}
+          <DashboardFooter />
         </div>
-        
-        {/* Mobile Header - visible only on mobile */}
-        <div className="lg:hidden">
-          <MobileHeader />
-        </div>
-        
-        {/* Main Content */}
-        <main className="flex-1">
-          <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-            <Breadcrumb />
-            {children}
-          </div>
-        </main>
-        
-        {/* Footer */}
-        <DashboardFooter />
-        
-        {/* Mobile Bottom Navigation */}
-        <MobileBottomNav />
       </div>
-    </div>
+    </>
   );
 }
