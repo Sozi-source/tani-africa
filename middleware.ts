@@ -12,23 +12,24 @@ export function middleware(request: NextRequest) {
 
   /* ================= AUTH ROUTES ================= */
 
-  // ✅ All auth routes are PUBLIC
+  // ✅ Auth routes are public
   if (pathname.startsWith('/auth')) {
-    // Logged‑in users should never see auth pages
+    // Logged‑in users should not see login/register pages
     if (isAuthenticated) {
       return redirectToDashboard(role, request);
     }
     return NextResponse.next();
   }
 
-  /* ================= ROOT (/) ================= */
+  /* ================= PUBLIC ROOT (/) ================= */
 
-  // ✅ ROOT IS NOW PROTECTED
+  // ✅ ROOT IS PUBLIC
   if (pathname === '/') {
-    if (!isAuthenticated) {
-      return redirectToLogin(request);
+    // Optional: redirect authenticated users to dashboard
+    if (isAuthenticated) {
+      return redirectToDashboard(role, request);
     }
-    return redirectToDashboard(role, request);
+    return NextResponse.next(); // ✅ allow landing page
   }
 
   /* ================= DASHBOARD BASE ================= */
@@ -47,7 +48,7 @@ export function middleware(request: NextRequest) {
       return redirectToLogin(request, pathname);
     }
 
-    // ✅ Role‑safe access control
+    // ✅ Role‑based access control
     if (pathname.startsWith('/dashboard/admin') && role !== 'ADMIN') {
       return redirectToDashboard(role, request);
     }
@@ -86,7 +87,6 @@ function redirectToDashboard(
   role: 'ADMIN' | 'DRIVER' | 'CLIENT' | undefined,
   request: NextRequest
 ) {
-  // ✅ Safe fallback
   if (!role) {
     return redirectToLogin(request);
   }
