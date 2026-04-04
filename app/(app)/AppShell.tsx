@@ -10,17 +10,17 @@ import { PageLoader } from '@/components/ui/PageLoader';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 
 import { useAuth } from '@/context/AuthContext';
+import { usePageLoader } from '@/lib/hooks/usePageLoader';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { initializing } = useAuth();
   const pathname = usePathname();
 
+  /* ================= Sidebar & Responsive ================= */
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  /* ================= Responsive ================= */
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -29,55 +29,58 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  /* ================= Initial Load ================= */
+  /* ================= Loader Control ================= */
 
-  useEffect(() => {
-    if (!initializing) {
-      const timer = setTimeout(() => setIsLoading(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [initializing]);
+  // ✅ Enforce minimum 3s loader visibility
+  const showLoader = usePageLoader(initializing, 3000);
+
+  /* ================= Auth Pages Bypass ================= */
 
   const isAuthPage = pathname.startsWith('/auth');
-  if (isAuthPage) return <>{children}</>;
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
+  /* ================= Loader Gate ================= */
+
+  if (showLoader) {
+    return <PageLoader />;
+  }
+
+  /* ================= Layout ================= */
 
   const sidebarWidth = isMobile ? 0 : isSidebarCollapsed ? 72 : 280;
 
   return (
-    <>
-      <PageLoader isLoading={isLoading} />
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onCollapseChange={setIsSidebarCollapsed}
+      />
 
-      <div className={`min-h-screen bg-gray-50 ${isLoading ? 'hidden' : 'block'}`}>
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          onCollapseChange={setIsSidebarCollapsed}
+      <div
+        className="min-h-screen flex flex-col transition-all duration-300"
+        style={{ marginLeft: sidebarWidth }}
+      >
+        <UnifiedHeader
+          onMenuClick={() => setIsSidebarOpen(true)}
+          sidebarWidth={sidebarWidth}
         />
 
-        <div
-          className="min-h-screen flex flex-col transition-all duration-300"
-          style={{ marginLeft: sidebarWidth }}
-        >
-          <UnifiedHeader
-            onMenuClick={() => setIsSidebarOpen(true)}
-            sidebarWidth={sidebarWidth}
-          />
+        {/* ✅ MAIN CONTENT */}
+        <main className="pt-16 flex-1">
+          <div className="px-4 py-6 sm:px-6 lg:px-8">
+            {/* ✅ Breadcrumbs */}
+            <Breadcrumb />
 
-          {/* ✅ MAIN CONTENT */}
-          <main className="pt-16 flex-1">
-            <div className="px-4 py-6 sm:px-6 lg:px-8">
+            {/* ✅ Page Content */}
+            {children}
+          </div>
+        </main>
 
-              {/* ✅ Breadcrumbs */}
-              <Breadcrumb />
-
-              {/* ✅ Page Content */}
-              {children}
-            </div>
-          </main>
-
-          <DashboardFooter />
-        </div>
+        <DashboardFooter />
       </div>
-    </>
+    </div>
   );
 }
