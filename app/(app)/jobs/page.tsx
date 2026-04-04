@@ -1,196 +1,166 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+export const dynamic = 'force-dynamic';
 
-import { useAuth } from '@/context/AuthContext';
+import { useMemo, useState } from 'react';
+
 import { useJobs } from '@/lib/hooks/useJobs';
+import { useAuth } from '@/lib/hooks/useAuth';
 
-import { JobCard } from '@/components/jobs/JobCard';
+import { Job } from '@/types';
+
+import { JobCard } from '@/app/(app)/dashboard/components/JobCard';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 
-import { DashboardLoader } from '@/app/(app)/dashboard/components/DashboardLoader';
-import { DashboardError } from '@/app/(app)/dashboard/components/DashboardError';
-
 import {
-  Search,
-  SlidersHorizontal,
-  X,
-  Package,
   Briefcase,
-  Clock,
+  Grid3x3,
+  List,
 } from 'lucide-react';
 
+/* =====================================================
+   Page
+===================================================== */
+
 export default function JobsPage() {
-  const router = useRouter();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { jobs = [], loading: jobsLoading, error, refetch } = useJobs();
+  const { jobs, loading, error, refetch } = useJobs();
+  const { isDriver } = useAuth();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | string>('ALL');
-  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showAll, setShowAll] = useState(false);
 
-  /* ================= AUTH GUARD ================= */
+  /* =====================================================
+     Visible jobs (safe for sharing)
+  ===================================================== */
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.replace('/auth/login');
+  const visibleJobs = useMemo(() => {
+    // Public rule:
+    // Drivers should only see BIDDING jobs
+    // Clients/Admins can safely see their own via dashboard
+    if (isDriver) {
+      return jobs.filter(job => job.status === 'BIDDING');
     }
-  }, [authLoading, isAuthenticated, router]);
+    return jobs;
+  }, [jobs, isDriver]);
 
-  /* ================= FILTERING ================= */
+  const displayedJobs = showAll
+    ? visibleJobs
+    : visibleJobs.slice(0, 9);
 
-  const filteredJobs = useMemo(() => {
-    let list = Array.isArray(jobs) ? [...jobs] : [];
+  /* =====================================================
+     States
+  ===================================================== */
 
-    // Drivers only see bidding jobs
-    if (user?.role === 'DRIVER') {
-      list = list.filter(j => j.status === 'BIDDING');
-    }
-
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      list = list.filter(j =>
-        j.title?.toLowerCase().includes(q) ||
-        j.pickUpLocation?.toLowerCase().includes(q) ||
-        j.dropOffLocation?.toLowerCase().includes(q)
-      );
-    }
-
-    if (statusFilter !== 'ALL') {
-      list = list.filter(j => j.status === statusFilter);
-    }
-
-    return list;
-  }, [jobs, searchTerm, statusFilter, user?.role]);
-
-  /* ================= LOADING & ERROR ================= */
-
-  if (authLoading || jobsLoading) {
-    return <DashboardLoader />;
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <DashboardError
-        message={error}
-        onRetry={refetch}
-      />
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center">
+        <p className="text-red-700 font-medium">
+          Failed to load jobs
+        </p>
+        <Button onClick={refetch} className="bg-orange-600 hover:bg-orange-700">
+          Try Again
+        </Button>
+      </div>
     );
   }
 
-  /* ================= UI ================= */
-
-  const statusOptions = [
-    { value: 'ALL', label: 'All', icon: Briefcase },
-    { value: 'SUBMITTED', label: 'Pending', icon: Clock },
-    { value: 'BIDDING', label: 'Bidding', icon: Package },
-    { value: 'ACTIVE', label: 'Active', icon: Package },
-    { value: 'COMPLETED', label: 'Completed', icon: Package },
-  ];
+  /* =====================================================
+     Render
+  ===================================================== */
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-
-        {/* ===== HEADER ===== */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Available Jobs
-          </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Browse and bid on available transport jobs
-          </p>
-        </div>
-
-        {/* ===== SEARCH + FILTER ===== */}
-        <div className="flex flex-col sm:flex-row gap-3">
-
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by title or location..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="
-                w-full rounded-lg border border-gray-300 bg-white
-                py-2.5 pl-9 pr-9 text-sm
-                focus:border-orange-600 focus:ring-2 focus:ring-orange-200
-              "
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                <X className="h-4 w-4 text-gray-400" />
-              </button>
-            )}
+    <div className="min-h-screen bg-gray-50">
+      {/* ===== Header ===== */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Available Jobs
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Browse transport jobs open for bidding
+            </p>
           </div>
 
-          {/* Filter toggle */}
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters
-          </Button>
-        </div>
+          {/* View Toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg ${
+                viewMode === 'grid'
+                  ? 'bg-orange-100 text-orange-700'
+                  : 'bg-gray-100 text-gray-500'
+              }`}
+              aria-label="Grid view"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </button>
 
-        {/* ===== FILTER CHIPS ===== */}
-        {showFilters && (
-          <div className="flex flex-wrap gap-2">
-            {statusOptions.map(opt => {
-              const Icon = opt.icon;
-              const active = statusFilter === opt.value;
-
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => setStatusFilter(opt.value)}
-                  className={`
-                    flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-                    ${active
-                      ? 'bg-orange-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-700'}
-                  `}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {opt.label}
-                </button>
-              );
-            })}
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg ${
+                viewMode === 'list'
+                  ? 'bg-orange-100 text-orange-700'
+                  : 'bg-gray-100 text-gray-500'
+              }`}
+              aria-label="List view"
+            >
+              <List className="h-4 w-4" />
+            </button>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* ===== RESULT COUNT ===== */}
-        <p className="text-sm text-gray-500">
-          Showing {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
-        </p>
-
-        {/* ===== CONTENT ===== */}
-        {filteredJobs.length === 0 ? (
-          <div className="py-16 text-center">
-            <Package className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+      {/* ===== Jobs Grid/List ===== */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {visibleJobs.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+            <Briefcase className="mx-auto h-12 w-12 text-gray-300 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900">
-              No jobs found
+              No jobs available
             </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Try adjusting your search or filters
+            <p className="text-gray-500 mt-1">
+              Please check back later for new opportunities
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredJobs.map(job => (
-              <JobCard key={job.id} job={job} />
+          <div
+            className={`grid gap-6 ${
+              viewMode === 'grid'
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                : 'grid-cols-1'
+            }`}
+          >
+            {displayedJobs.map((job: Job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                showBidButton={isDriver}
+              />
             ))}
           </div>
         )}
 
+        {/* ===== Show More ===== */}
+        {visibleJobs.length > 9 && (
+          <div className="text-center mt-10">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="px-6 py-2 rounded-lg border border-orange-600 text-orange-700 hover:bg-orange-50 font-medium"
+            >
+              {showAll ? 'Show Less' : 'View More Jobs'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

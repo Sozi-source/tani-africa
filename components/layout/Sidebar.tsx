@@ -63,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ? [
         { name: 'Admin Dashboard', href: '/dashboard/admin', icon: Shield },
         { name: 'Users', href: '/dashboard/admin/users', icon: Users },
-        { name: 'Jobs', href: '/jobs', icon: Briefcase },
+        { name: 'Jobs', href: '/dashboard/admin/jobs', icon: Briefcase },
         { name: 'Vehicles', href: '/vehicles', icon: Truck },
         { name: 'driver', href: '/dashboard/admin/drivers', icon: CgDrive },
         { name: 'features', href: '/dashboard/admin/features', icon: Settings },

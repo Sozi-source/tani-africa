@@ -135,9 +135,19 @@ export function PageLoader({ isLoading = true, minDisplayTime = 800 }: PageLoade
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
+         
           style={{
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 25%, #2e1065 50%, #1e1b4b 75%, #0f172a 100%)',
+            background: `
+              linear-gradient(
+                135deg,
+                #2A060C 0%,
+                #5B0F1B 40%,
+                #7A1F2C 70%,
+                #2A060C 100%
+              )
+            `,
           }}
+
         >
           {/* Animated background particles - only render on client */}
           {isClient && particles.length > 0 && (

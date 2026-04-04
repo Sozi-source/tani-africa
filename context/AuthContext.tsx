@@ -1,181 +1,225 @@
-// context/AuthContext.tsx
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
+
 import { authAPI } from '@/lib/api';
-import { User, LoginCredentials, RegisterData, LoginResponse } from '@/types';
+import {
+  User,
+  LoginCredentials,
+  RegisterData,
+  LoginResponse,
+} from '@/types';
 import toast from 'react-hot-toast';
 
-interface AuthContextType {
+/* =====================================================
+   Types
+===================================================== */
+
+export interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
   initializing: boolean;
+  isLoggingOut: boolean;
+
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
   register: (userData: RegisterData) => Promise<User>;
   logout: () => void;
+
   isAuthenticated: boolean;
   isClient: boolean;
   isDriver: boolean;
   isAdmin: boolean;
 }
 
+/* =====================================================
+   Context
+===================================================== */
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context;
+  return ctx;
 };
+
+/* =====================================================
+   Provider
+===================================================== */
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [initializing, setInitializing] = useState(true);
 
-  // Restore session
+  const [loading, setLoading] = useState<boolean>(false);
+  const [initializing, setInitializing] = useState<boolean>(true);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+
+  /* ================= Restore session ================= */
+
   useEffect(() => {
-    const restoreSession = () => {
-      try {
-        const storedToken = localStorage.getItem('token') || localStorage.getItem('accessToken');
-        const storedUser = localStorage.getItem('user');
-        
-        if (storedToken && storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setToken(storedToken);
-          setUser(parsedUser);
-          console.log('Session restored for:', parsedUser.email);
-        }
-      } catch (error) {
-        console.error('Error restoring session:', error);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-      } finally {
-        setLoading(false);
-        setInitializing(false);
+    try {
+      const storedToken =
+        localStorage.getItem('accessToken') ||
+        localStorage.getItem('token');
+
+      const storedUser = localStorage.getItem('user');
+
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
       }
-    };
-    
-    restoreSession();
+    } catch (err) {
+      console.error('Failed to restore auth session:', err);
+      localStorage.clear();
+    } finally {
+      setInitializing(false);
+    }
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  /* ================= Login ================= */
+
+  const login = async (
+    credentials: LoginCredentials
+  ): Promise<LoginResponse> => {
+    setLoading(true);
     try {
-      setLoading(true);
       const response = await authAPI.login(credentials);
-      
-      const { accessToken, refreshToken, user: userData } = response;
-      
-      if (!accessToken || !userData) {
-        throw new Error('Invalid response structure from server');
+      const { accessToken, refreshToken, user: apiUser } = response;
+
+      if (!accessToken || !apiUser) {
+        throw new Error('Invalid login response');
       }
-      
-      // Normalize user data
+
       const normalizedUser: User = {
-        id: userData.id,
-        email: userData.email,
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        role: userData.role?.toUpperCase() as User['role'] || 'CLIENT',
-        phone: userData.phone,
-        photo: userData.photo,
-        isActive: userData.isActive !== false,
-        createdAt: userData.createdAt || new Date().toISOString(),
-        updatedAt: userData.updatedAt || new Date().toISOString(),
+        id: apiUser.id,
+        email: apiUser.email,
+        firstName: apiUser.firstName ?? '',
+        lastName: apiUser.lastName ?? '',
+        role:
+          (apiUser.role?.toUpperCase() as User['role']) ??
+          'CLIENT',
+        phone: apiUser.phone,
+        photo: apiUser.photo,
+        isActive: apiUser.isActive !== false,
+        createdAt:
+          apiUser.createdAt ?? new Date().toISOString(),
+        updatedAt:
+          apiUser.updatedAt ?? new Date().toISOString(),
       };
-      
-      // Store auth data
-      authAPI.setAuthData(accessToken, refreshToken, normalizedUser);
-      
-      // Update state
+
+      // ✅ CORRECT: refreshToken is optional
+      authAPI.setAuthData(
+        accessToken,
+        refreshToken,
+        normalizedUser
+      );
+
       setToken(accessToken);
       setUser(normalizedUser);
-      
-      toast.success(`Welcome ${normalizedUser.firstName || normalizedUser.role}!`);
-      
-      return { accessToken, refreshToken, user: normalizedUser };
-      
-    } catch (error: any) {
-      console.error('Login error:', error);
-      const message = error?.response?.data?.message || error?.message || 'Login failed';
-      toast.error(message);
-      throw error;
+
+      toast.success(
+        `Welcome ${normalizedUser.firstName || normalizedUser.role}!`
+      );
+
+      return {
+        accessToken,
+        refreshToken,
+        user: normalizedUser,
+      };
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          'Login failed'
+      );
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (userData: RegisterData): Promise<User> => {
+  /* ================= Register ================= */
+
+  const register = async (
+    userData: RegisterData
+  ): Promise<User> => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await authAPI.register(userData);
+      const user = await authAPI.register(userData);
       toast.success('Registration successful! Please sign in.');
-      return response;
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      const message = error?.response?.data?.message || error?.message || 'Registration failed';
-      toast.error(message);
-      throw error;
+      return user;
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          'Registration failed'
+      );
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
- // context/AuthContext.tsx - Updated logout function
+  /* ================= Logout ================= */
 
-const logout = () => {
-  // Clear everything synchronously
-  if (typeof window !== 'undefined') {
-    // Clear localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('auth_token');
-    
-    // Clear sessionStorage
+  const logout = () => {
+    // ✅ Stop application rendering immediately
+    setIsLoggingOut(true);
+
+    // ✅ Clear all client auth traces
+    localStorage.clear();
     sessionStorage.clear();
-    
-    // Clear all cookies
+
+    // ✅ Clear cookies (non‑httpOnly)
     document.cookie.split(';').forEach(cookie => {
       const [name] = cookie.split('=');
-      if (name.trim()) {
+      if (name?.trim()) {
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
       }
     });
-    
-    // Clear any cached data
-    if (window.caches) {
-      caches.keys().then(keys => {
-        keys.forEach(key => caches.delete(key));
-      });
-    }
-  }
-  
-  // Clear state
-  setUser(null);
-  setToken(null);
-  
-  // Force immediate redirect without history
-  window.location.replace('/auth/login');
-};
+
+    // ✅ Clear in‑memory state
+    setUser(null);
+    setToken(null);
+
+    // ✅ HARD redirect — cannot be overridden
+    window.location.replace('/auth/login');
+  };
+
+  /* =====================================================
+     Context value
+  ===================================================== */
 
   const value: AuthContextType = {
     user,
     token,
     loading,
     initializing,
+    isLoggingOut,
+
     login,
     register,
     logout,
-    isAuthenticated: !!user && !!token,
+
+    isAuthenticated: Boolean(user && token),
     isClient: user?.role === 'CLIENT',
     isDriver: user?.role === 'DRIVER',
     isAdmin: user?.role === 'ADMIN',
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

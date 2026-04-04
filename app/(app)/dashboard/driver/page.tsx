@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { User as UserType, Job } from '@/types';
+import { useState, useMemo, useEffect } from 'react';
+import { User as UserType, Job, Bid } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useJobs } from '@/lib/hooks/useJobs';
 import { useBids } from '@/lib/hooks/useBids';
@@ -45,9 +45,8 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
   } = useJobs();
 
   const {
-    bids = [],
     loading: bidsLoading,
-    refetch: refetchBids,
+    getBidsByJob,
   } = useBids();
 
   const {
@@ -55,12 +54,43 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
     loading: vehiclesLoading,
   } = useVehicles(user?.id);
 
-  /* ================= UI STATE ================= */
+  /* ================= LOCAL STATE ================= */
 
+  const [driverBids, setDriverBids] = useState<Bid[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showBidModal, setShowBidModal] = useState(false);
   const [showAllJobs, setShowAllJobs] = useState(false);
+
+  /* ================= FETCH DRIVER BIDS ================= */
+
+  useEffect(() => {
+    if (!user?.id || jobs.length === 0) return;
+
+    let cancelled = false;
+
+    const loadBids = async () => {
+      try {
+        const bidsByJob = await Promise.all(
+          jobs.map(j => getBidsByJob(j.id))
+        );
+
+        const allBids = bidsByJob.flat();
+        const myBids = allBids.filter(
+          b => b.driverId === user.id
+        );
+
+        if (!cancelled) setDriverBids(myBids);
+      } catch {
+        // silently fail — dashboard still works
+      }
+    };
+
+    loadBids();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobs, user?.id, getBidsByJob]);
 
   /* ================= DERIVED DATA ================= */
 
@@ -68,13 +98,9 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
     authLoading || jobsLoading || bidsLoading || vehiclesLoading;
 
   const stats = useMemo(() => {
-    const safeJobs = Array.isArray(jobs) ? jobs : [];
-    const safeBids = Array.isArray(bids) ? bids : [];
+    const myJobs = jobs.filter(j => j.driverId === user?.id);
 
-    const myBids = safeBids.filter(b => b.driverId === user?.id);
-    const myJobs = safeJobs.filter(j => j.driverId === user?.id);
-
-    const availableJobs = safeJobs.filter(j => j.status === 'BIDDING');
+    const availableJobs = jobs.filter(j => j.status === 'BIDDING');
     const activeJobs = myJobs.filter(j => j.status === 'ACTIVE');
 
     const earnings = myJobs
@@ -82,12 +108,12 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
       .reduce((sum, j) => sum + (j.price || 0), 0);
 
     return {
-      myBids,
+      myBids: driverBids,
       availableJobs,
       activeJobs,
       earnings,
     };
-  }, [jobs, bids, user?.id]);
+  }, [jobs, driverBids, user?.id]);
 
   /* ================= GUARDS ================= */
 
@@ -95,7 +121,7 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <DashboardError
           message="User not found. Please log in again."
           onRetry={() => (window.location.href = '/auth/login')}
@@ -118,7 +144,6 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 py-6 space-y-8">
 
-        {/* ===== Welcome ===== */}
         <WelcomeBanner
           firstName={user.firstName || 'Driver'}
           role="DRIVER"
@@ -127,152 +152,68 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
 
         {/* ===== Stats ===== */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">
-            Performance Overview
-          </h2>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard
               title="Available Jobs"
               value={stats.availableJobs.length}
               icon={Package}
-              color="yellow"
             />
             <StatCard
               title="Active Jobs"
               value={stats.activeJobs.length}
               icon={Truck}
-              color="green"
             />
             <StatCard
               title="My Bids"
               value={stats.myBids.length}
               icon={Hammer}
-              color="yellow"
             />
             <StatCard
               title="Total Earnings"
               value={`KES ${stats.earnings.toLocaleString()}`}
               icon={DollarSign}
-              color="gray"
-            />
-          </div>
-        </section>
-
-        {/* ===== Quick Actions ===== */}
-        <section>
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">
-            Quick Actions
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <QuickActionCard
-              href="/jobs"
-              icon={<Briefcase className="h-5 w-5" />}
-              title="Browse Jobs"
-              description="Find available shipments"
-              iconBgColor="bg-yellow-100"
-              iconColor="text-yellow-800"
-            />
-
-            <QuickActionCard
-              href="/bids"
-              icon={<Hammer className="h-5 w-5" />}
-              title="My Bids"
-              description={`${stats.myBids.length} active bids`}
-              iconBgColor="bg-orange-100"
-              iconColor="text-orange-700"
-            />
-
-            <QuickActionCard
-              href="/vehicles"
-              icon={<Truck className="h-5 w-5" />}
-              title="My Vehicles"
-              description={`${vehicles.length} registered`}
-              iconBgColor="bg-green-100"
-              iconColor="text-green-700"
             />
           </div>
         </section>
 
         {/* ===== Available Jobs ===== */}
-        {stats.availableJobs.length > 0 ? (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-700">
-                Available Jobs
-              </h2>
+        <section>
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-sm font-semibold">Available Jobs</h2>
 
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-md ${
-                      viewMode === 'grid'
-                        ? 'bg-white shadow text-orange-600'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    <Grid3x3 className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-md ${
-                      viewMode === 'list'
-                        ? 'bg-white shadow text-orange-600'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    <List className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {stats.availableJobs.length > 6 && (
-                  <button
-                    onClick={() => setShowAllJobs(!showAllJobs)}
-                    className="text-xs font-medium text-orange-600 hover:underline"
-                  >
-                    {showAllJobs ? 'Show Less' : 'View All'}
-                  </button>
-                )}
-              </div>
+            <div className="flex gap-2">
+              <button onClick={() => setViewMode('grid')}>
+                <Grid3x3 className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode('list')}>
+                <List className="h-4 w-4" />
+              </button>
             </div>
-
-            <div
-              className={`grid gap-4 ${
-                viewMode === 'grid'
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                  : 'grid-cols-1'
-              }`}
-            >
-              {displayedJobs.map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  showBidButton
-                  onPlaceBid={(jobItem) => {
-                    setSelectedJob(jobItem);
-                    setShowBidModal(true);
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-        ) : (
-          <div className="text-center py-12">
-            <Package className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-            <p className="text-sm text-gray-500">
-              No available jobs at the moment
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Check back later for new shipments
-            </p>
           </div>
-        )}
+
+          <div
+            className={`grid gap-4 ${
+              viewMode === 'grid'
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                : 'grid-cols-1'
+            }`}
+          >
+            {displayedJobs.map(job => (
+              <JobCard
+                key={job.id}
+                job={job}
+                showBidButton
+                onPlaceBid={jobItem => {
+                  setSelectedJob(jobItem);
+                  setShowBidModal(true);
+                }}
+              />
+            ))}
+          </div>
+        </section>
       </div>
 
-      {/* ===== Place Bid Modal ===== */}
+      {/* ===== Bid Modal ===== */}
       {selectedJob && (
         <PlaceBidModal
           isOpen={showBidModal}
@@ -282,11 +223,10 @@ export default function DriverDashboard({ user: propUser }: DriverDashboardProps
           }}
           jobId={selectedJob.id}
           jobTitle={
-            selectedJob.title ||
+            selectedJob.title ??
             `Transport from ${selectedJob.pickUpLocation}`
           }
           onSuccess={async () => {
-            await refetchBids();
             await refetchJobs();
             setShowBidModal(false);
             setSelectedJob(null);

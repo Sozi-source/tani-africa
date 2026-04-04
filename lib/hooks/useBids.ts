@@ -1,84 +1,104 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { Bid, CreateBidData } from '@/types';
-import { bidsAPI } from '@/lib/api/bids';
+import { useCallback, useRef, useState } from 'react';
+import apiClient from '@/lib/api/client';
+import { Bid } from '@/types';
+import { useAuth } from '@/lib/hooks/useAuth';
 
-export interface UseBidsReturn {
-  bids: Bid[];
-  loading: boolean;
-  error: string | null;
+/* =====================================================
+   Internal caches
+===================================================== */
 
-  refetch: () => Promise<void>;
-  placeBid: (data: CreateBidData) => Promise<Bid>;
-  updateBidStatus: (id: string, status: string) => Promise<Bid>;
+const bidsCache = new Map<string, Bid[]>();
+const inFlight = new Map<string, Promise<Bid[]>>();
 
-  getBidsByJob: (jobId: string) => Promise<Bid[]>;
-  getBidsByDriver: (driverId: string) => Promise<Bid[]>;
-}
-
-/* ================= HOOK ================= */
-
-export function useBids(): UseBidsReturn {
-  const [bids, setBids] = useState<Bid[]>([]);
+export function useBids() {
+  const { user, isDriver } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(true);
 
-  /* ---------- FETCH ALL ---------- */
-
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await bidsAPI.getAll();
-      setBids(data);
-    } catch (err) {
-      setError('Failed to load bids');
-    } finally {
-      setLoading(false);
+  /* ---------------------------------------------------
+     Get bids by job (cached & deduped)
+  --------------------------------------------------- */
+  const getBidsByJob = useCallback(async (jobId: string): Promise<Bid[]> => {
+    if (bidsCache.has(jobId)) {
+      return bidsCache.get(jobId)!;
     }
+
+    if (inFlight.has(jobId)) {
+      return inFlight.get(jobId)!;
+    }
+
+    setLoading(true);
+
+    const request = (async () => {
+      try {
+        const res = await apiClient.get(`/bids/job/${jobId}`);
+        const bids: Bid[] = res.data;
+        bidsCache.set(jobId, bids);
+        return bids;
+      } finally {
+        inFlight.delete(jobId);
+        if (mounted.current) setLoading(false);
+      }
+    })();
+
+    inFlight.set(jobId, request);
+    return request;
   }, []);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  /* ---------------------------------------------------
+     Place bid (✅ FIXED)
+  --------------------------------------------------- */
+  const placeBid = useCallback(
+    async (payload: {
+      jobId: string;
+      price: number;
+      estimatedDuration?: number;
+      message?: string;
+    }) => {
+      if (!isDriver || !user?.id) {
+        throw new Error('Only authenticated drivers can place bids');
+      }
 
-  /* ---------- ACTIONS ---------- */
+      const requestPayload = {
+        jobId: payload.jobId,
+        driverId: user.id,                     // ✅ REQUIRED BY PRISMA
+        price: Number(payload.price),          // ✅ int
+        ...(payload.estimatedDuration
+          ? { estimatedDuration: Number(payload.estimatedDuration) }
+          : {}),
+        ...(payload.message?.trim()
+          ? { message: payload.message.trim() }
+          : {}),
+      };
 
-  const placeBid = async (data: CreateBidData) => {
-    const bid = await bidsAPI.create(data);
-    setBids(prev => [bid, ...prev]);
-    return bid;
-  };
+      const res = await apiClient.post('/bids', requestPayload);
 
-  const updateBidStatus = async (id: string, status: string) => {
-    const updated = await bidsAPI.updateStatus(id, status);
-    setBids(prev =>
-      prev.map(b => (b.id === id ? updated : b))
-    );
-    return updated;
-  };
+      // ✅ invalidate cache (unique constraint exists)
+      bidsCache.clear();
 
-  /* ---------- QUERY HELPERS ---------- */
+      return res.data;
+    },
+    [user, isDriver]
+  );
 
-  const getBidsByJob = async (jobId: string) => {
-    return await bidsAPI.getByJob(jobId);
-  };
-
-  const getBidsByDriver = async (driverId: string) => {
-    return await bidsAPI.getByDriver(driverId);
-  };
+  /* ---------------------------------------------------
+     Update bid status
+  --------------------------------------------------- */
+  const updateBidStatus = useCallback(
+    async (bidId: string, status: Bid['status']) => {
+      const res = await apiClient.patch(`/bids/${bidId}/status`, { status });
+      bidsCache.clear();
+      return res.data;
+    },
+    []
+  );
 
   return {
-    bids,
     loading,
-    error,
-
-    refetch: fetchAll,
+    getBidsByJob,
     placeBid,
     updateBidStatus,
-
-    getBidsByJob,
-    getBidsByDriver,
   };
 }

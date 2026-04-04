@@ -1,32 +1,48 @@
 'use client';
 
 import Link from 'next/link';
-import { Job } from '@/types';
+import { useState } from 'react';
+
+import { Job, JOB_STATUS_CONFIG } from '@/types';
+import { useAuth } from '@/lib/hooks/useAuth';
+
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { MapPin, Clock, Package, Calendar, Eye, Truck } from 'lucide-react';
-import { formatCurrency, formatRelativeTime } from '@/lib/utils/formatters';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useState } from 'react';
 import { PlaceBidModal } from '@/components/bids/PlaceBidModal';
+
+import {
+  MapPin,
+  Clock,
+  Calendar,
+  Eye,
+  Truck,
+} from 'lucide-react';
+
+import {
+  formatCurrency,
+  formatRelativeTime,
+} from '@/lib/utils/formatters';
 
 interface JobCardProps {
   job: Job;
+  /** Whether bidding is allowed from the parent context */
   showBidButton?: boolean;
-  showActions?: boolean;
 }
 
-export const JobCard: React.FC<JobCardProps> = ({ job, showBidButton }) => {
-  const { isDriver, isAuthenticated } = useAuth();
+export const JobCard: React.FC<JobCardProps> = ({
+  job,
+  showBidButton = false,
+}) => {
+  /* ================= AUTH ================= */
+
+  const { isAuthenticated, isAdmin, isDriver } = useAuth();
   const [showBidModal, setShowBidModal] = useState(false);
 
-  const statusClasses: Record<string, string> = {
-    SUBMITTED: 'bg-yellow-100 text-yellow-800',
-    BIDDING: 'bg-orange-100 text-orange-800',
-    ACTIVE: 'bg-green-100 text-green-800',
-    COMPLETED: 'bg-gray-100 text-gray-700',
-    CANCELLED: 'bg-red-100 text-red-700',
-  };
+  /* ================= STATUS UI ================= */
+
+  const statusUI = JOB_STATUS_CONFIG[job.status];
+
+  /* ================= PERMISSIONS ================= */
 
   const canBid =
     showBidButton &&
@@ -34,31 +50,46 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showBidButton }) => {
     isDriver &&
     job.status === 'BIDDING';
 
+  /* ================= ROUTING ================= */
+
+  const detailsHref = isAdmin
+    ? `/dashboard/admin/jobs/${job.id}`
+    : isDriver
+    ? `/dashboard/driver/jobs/${job.id}`
+    : `/dashboard/client/jobs/${job.id}`;
+
+  /* ================= RENDER ================= */
+
   return (
     <>
       <Card className="h-full">
         <CardBody className="p-4 flex flex-col h-full">
+          {/* ===== Status & Time ===== */}
           <div className="flex justify-between items-center mb-3">
             <span
-              className={`text-xs px-2 py-1 rounded-full font-medium ${statusClasses[job.status]}`}
+              className={`text-xs px-2 py-1 rounded-full font-medium ${statusUI.color}`}
             >
-              {job.status}
+              {statusUI.label}
             </span>
+
             <span className="text-xs text-gray-400 flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatRelativeTime(job.createdAt)}
             </span>
           </div>
 
-          <h3 className="font-semibold text-gray-900 mb-2">
+          {/* ===== Title ===== */}
+          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
             {job.title || 'Transport Job'}
           </h3>
 
+          {/* ===== Locations ===== */}
           <div className="text-sm text-gray-600 mb-2 flex items-center gap-2">
             <MapPin className="h-4 w-4 text-green-600" />
             {job.pickUpLocation} → {job.dropOffLocation}
           </div>
 
+          {/* ===== Schedule ===== */}
           <div className="text-sm text-gray-600 mb-2 flex items-center gap-2">
             <Calendar className="h-4 w-4 text-red-600" />
             {job.scheduledDate
@@ -66,7 +97,8 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showBidButton }) => {
               : 'Flexible'}
           </div>
 
-          {job.price && (
+          {/* ===== Price ===== */}
+          {job.price != null && (
             <div className="mt-2 mb-4">
               <span className="text-xl font-bold text-red-600">
                 {formatCurrency(job.price)}
@@ -74,8 +106,9 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showBidButton }) => {
             </div>
           )}
 
+          {/* ===== Actions ===== */}
           <div className="mt-auto space-y-2">
-            <Link href={`/jobs/${job.id}`}>
+            <Link href={detailsHref}>
               <Button variant="outline" fullWidth>
                 <Eye className="h-4 w-4 mr-1" />
                 View Details
@@ -96,6 +129,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showBidButton }) => {
         </CardBody>
       </Card>
 
+      {/* ===== Place Bid Modal ===== */}
       {showBidModal && (
         <PlaceBidModal
           isOpen={showBidModal}

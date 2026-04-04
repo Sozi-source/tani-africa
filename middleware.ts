@@ -4,65 +4,98 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Get role from cookie
-  const role = request.cookies.get('user_role')?.value;
-  const isAuthenticated = !!role;
-  
-  // Public paths that don't require auth
-  const publicPaths = ['/auth/login', '/auth/register', '/auth/forgot-password'];
-  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
-  
-  // Redirect root to appropriate dashboard if authenticated
-  if (pathname === '/') {
+
+  // ✅ Read role cookie defensively
+  const roleCookie = request.cookies.get('user_role');
+  const role = roleCookie?.value as 'ADMIN' | 'DRIVER' | 'CLIENT' | undefined;
+  const isAuthenticated = Boolean(role);
+
+  /* ================= AUTH ROUTES ================= */
+
+  // ✅ All auth routes are PUBLIC
+  if (pathname.startsWith('/auth')) {
+    // Logged‑in users should never see auth pages
     if (isAuthenticated) {
-      if (role === 'ADMIN') return NextResponse.redirect(new URL('/dashboard/admin', request.url));
-      if (role === 'DRIVER') return NextResponse.redirect(new URL('/dashboard/driver', request.url));
-      if (role === 'CLIENT') return NextResponse.redirect(new URL('/dashboard/client', request.url));
+      return redirectToDashboard(role, request);
     }
     return NextResponse.next();
   }
-  
-  // Redirect /dashboard to role-specific page
+
+  /* ================= ROOT (/) ================= */
+
+  // ✅ ROOT IS NOW PROTECTED
+  if (pathname === '/') {
+    if (!isAuthenticated) {
+      return redirectToLogin(request);
+    }
+    return redirectToDashboard(role, request);
+  }
+
+  /* ================= DASHBOARD BASE ================= */
+
   if (pathname === '/dashboard') {
     if (!isAuthenticated) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      return redirectToLogin(request);
     }
-    if (role === 'ADMIN') return NextResponse.redirect(new URL('/dashboard/admin', request.url));
-    if (role === 'DRIVER') return NextResponse.redirect(new URL('/dashboard/driver', request.url));
-    if (role === 'CLIENT') return NextResponse.redirect(new URL('/dashboard/client', request.url));
+    return redirectToDashboard(role, request);
   }
-  
-  // Protect all dashboard routes
+
+  /* ================= DASHBOARD PROTECTION ================= */
+
   if (pathname.startsWith('/dashboard')) {
     if (!isAuthenticated) {
-      const loginUrl = new URL('/auth/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      return redirectToLogin(request, pathname);
     }
-    
-    // Role-based access control for specific dashboard routes
+
+    // ✅ Role‑safe access control
     if (pathname.startsWith('/dashboard/admin') && role !== 'ADMIN') {
-      return NextResponse.redirect(new URL(`/dashboard/${role?.toLowerCase()}`, request.url));
+      return redirectToDashboard(role, request);
     }
-    if (pathname.startsWith('/dashboard/driver') && role !== 'DRIVER' && role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard/client', request.url));
+
+    if (
+      pathname.startsWith('/dashboard/driver') &&
+      role !== 'DRIVER' &&
+      role !== 'ADMIN'
+    ) {
+      return redirectToDashboard(role, request);
     }
-    if (pathname.startsWith('/dashboard/client') && role !== 'CLIENT' && role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard/driver', request.url));
+
+    if (
+      pathname.startsWith('/dashboard/client') &&
+      role !== 'CLIENT' &&
+      role !== 'ADMIN'
+    ) {
+      return redirectToDashboard(role, request);
     }
   }
-  
-  // Redirect authenticated users away from login page
-  if (isPublicPath && isAuthenticated) {
-    if (role === 'ADMIN') return NextResponse.redirect(new URL('/dashboard/admin', request.url));
-    if (role === 'DRIVER') return NextResponse.redirect(new URL('/dashboard/driver', request.url));
-    if (role === 'CLIENT') return NextResponse.redirect(new URL('/dashboard/client', request.url));
-  }
-  
+
   return NextResponse.next();
 }
 
+/* ================= HELPERS ================= */
+
+function redirectToLogin(request: NextRequest, from?: string) {
+  const url = new URL('/auth/login', request.url);
+  if (from) {
+    url.searchParams.set('redirect', from);
+  }
+  return NextResponse.redirect(url);
+}
+
+function redirectToDashboard(
+  role: 'ADMIN' | 'DRIVER' | 'CLIENT' | undefined,
+  request: NextRequest
+) {
+  // ✅ Safe fallback
+  if (!role) {
+    return redirectToLogin(request);
+  }
+
+  return NextResponse.redirect(
+    new URL(`/dashboard/${role.toLowerCase()}`, request.url)
+  );
+}
+
 export const config = {
-  matcher: ['/', '/dashboard', '/dashboard/:path*', '/auth/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/auth/:path*'],
 };
