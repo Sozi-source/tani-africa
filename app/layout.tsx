@@ -23,7 +23,7 @@ export default function RootLayout({
       className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-gray-50 antialiased">
+      <body className="min-h-screen antialiased">
 
         {/* ✅ Providers ONLY here */}
         <AuthProvider>
