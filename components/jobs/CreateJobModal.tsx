@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,12 +36,12 @@ interface CreateJobModalProps {
 
 /* ================= COMPONENT ================= */
 
-export const CreateJobModal: React.FC<CreateJobModalProps> = ({
+export function CreateJobModal({
   isOpen,
   onClose,
   onSubmit,
   isSubmitting = false,
-}) => {
+}: CreateJobModalProps) {
   const { user } = useAuth();
   const [charCount, setCharCount] = useState(0);
 
@@ -76,7 +76,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     if (!isOpen) reset();
   }, [isOpen, reset]);
 
-  /* ================= SUBMISSION ================= */
+  /* ================= SUBMIT ================= */
 
   const handleFormSubmit = async (data: JobFormData) => {
     if (!user?.id) {
@@ -101,10 +101,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     reset();
   };
 
-  const onConfirmClick = () => {
-    handleSubmit(handleFormSubmit)();
-  };
-
   /* ================= RENDER ================= */
 
   return (
@@ -112,118 +108,122 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Post a New Job"
-      confirmText={isSubmitting ? 'Posting…' : 'Post Job'}
-      onConfirm={onConfirmClick}
-      isLoading={isSubmitting}
       size="lg"
     >
-      {/* ===== SCROLLABLE BODY ===== */}
-      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+      {/* ✅ Centered container */}
+      <div className="flex justify-center">
+        <div className="w-full max-w-xl">
 
-        {/* Job Title */}
-        <input
-          {...register('title')}
-          placeholder="Job title (optional)"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-600 focus:ring-2 focus:ring-orange-200"
-        />
-
-        {/* Pickup Location */}
-        <div>
-          <input
-            {...register('pickUpLocation')}
-            placeholder="Pickup location *"
-            className={`w-full rounded-lg border px-3 py-2 focus:ring-2 ${
-              errors.pickUpLocation
-                ? 'border-red-500 focus:ring-red-200'
-                : 'border-gray-300 focus:ring-orange-200'
-            }`}
-          />
-          {errors.pickUpLocation && (
-            <p className="text-xs text-red-500 mt-1">
-              {errors.pickUpLocation.message}
-            </p>
-          )}
-        </div>
-
-        {/* Dropoff Location */}
-        <div>
-          <input
-            {...register('dropOffLocation')}
-            placeholder="Dropoff location *"
-            className={`w-full rounded-lg border px-3 py-2 focus:ring-2 ${
-              errors.dropOffLocation
-                ? 'border-red-500 focus:ring-red-200'
-                : 'border-gray-300 focus:ring-orange-200'
-            }`}
-          />
-          {errors.dropOffLocation && (
-            <p className="text-xs text-red-500 mt-1">
-              {errors.dropOffLocation.message}
-            </p>
-          )}
-        </div>
-
-        {/* Description */}
-        <div>
-          <textarea
-            {...register('description')}
-            rows={4}
-            maxLength={1000}
-            placeholder="Job description (optional)"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-600 focus:ring-2 focus:ring-orange-200"
-          />
-          <p className="text-xs text-gray-500 text-right mt-1">
-            {charCount}/1000 characters
-          </p>
-        </div>
-
-        {/* Weight + Budget */}
-        <div className="grid grid-cols-2 gap-4">
-          <input
-            type="number"
-            {...register('cargoWeight', { valueAsNumber: true })}
-            placeholder="Weight (kg)"
-            className="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
-          />
-          <input
-            type="number"
-            {...register('price', { valueAsNumber: true })}
-            placeholder="Budget (KES)"
-            className="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
-          />
-        </div>
-
-        {/* Scheduled Date */}
-        <input
-          type="datetime-local"
-          {...register('scheduledDate')}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
-        />
-
-        {/* Info */}
-        <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800 flex gap-2">
-          <Info className="h-5 w-5 shrink-0" />
-          Your job will be reviewed before going live to drivers.
-        </div>
-
-        {/* Tip */}
-        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800 flex gap-2">
-          <Package className="h-5 w-5 shrink-0" />
-          Clear locations and fair pricing attract better bids.
-        </div>
-
-        {/* ===== SUBMIT BUTTON ===== */}
-        <div className="pt-4 border-t border-gray-200 sticky bottom-0 bg-white">
-          <Button
-            type="button"
-            loading={isSubmitting}
-            onClick={handleSubmit(handleFormSubmit)}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+          {/* ✅ Scrollable body (not full height) */}
+          <form
+            onSubmit={handleSubmit(handleFormSubmit)}
+            className="space-y-4 max-h-[60vh] overflow-y-auto pr-2"
           >
-            {isSubmitting ? 'Posting job…' : 'Submit Job'}
-          </Button>
+            {/* Job Title */}
+            <input
+              {...register('title')}
+              placeholder="Job title (optional)"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-600 focus:ring-2 focus:ring-orange-200"
+            />
+
+            {/* Pickup Location */}
+            <div>
+              <input
+                {...register('pickUpLocation')}
+                placeholder="Pickup location *"
+                className={`w-full rounded-lg border px-3 py-2 focus:ring-2 ${
+                  errors.pickUpLocation
+                    ? 'border-red-500 focus:ring-red-200'
+                    : 'border-gray-300 focus:ring-orange-200'
+                }`}
+              />
+              {errors.pickUpLocation && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.pickUpLocation.message}
+                </p>
+              )}
+            </div>
+
+            {/* Dropoff Location */}
+            <div>
+              <input
+                {...register('dropOffLocation')}
+                placeholder="Dropoff location *"
+                className={`w-full rounded-lg border px-3 py-2 focus:ring-2 ${
+                  errors.dropOffLocation
+                    ? 'border-red-500 focus:ring-red-200'
+                    : 'border-gray-300 focus:ring-orange-200'
+                }`}
+              />
+              {errors.dropOffLocation && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.dropOffLocation.message}
+                </p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div>
+              <textarea
+                {...register('description')}
+                rows={4}
+                maxLength={1000}
+                placeholder="Job description (optional)"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-600 focus:ring-2 focus:ring-orange-200"
+              />
+              <p className="text-xs text-gray-500 text-right mt-1">
+                {charCount}/1000 characters
+              </p>
+            </div>
+
+            {/* Weight & Budget */}
+            <div className="grid grid-cols-2 gap-4">
+              <input
+                type="number"
+                {...register('cargoWeight', { valueAsNumber: true })}
+                placeholder="Weight (kg)"
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
+              />
+              <input
+                type="number"
+                {...register('price', { valueAsNumber: true })}
+                placeholder="Budget (KES)"
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
+              />
+            </div>
+
+            {/* Scheduled Date */}
+            <input
+              type="datetime-local"
+              {...register('scheduledDate')}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
+            />
+
+            {/* Info */}
+            <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800 flex gap-2">
+              <Info className="h-5 w-5 shrink-0" />
+              Your job will be reviewed before going live to drivers.
+            </div>
+
+            {/* Tip */}
+            <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800 flex gap-2">
+              <Package className="h-5 w-5 shrink-0" />
+              Clear locations and fair pricing attract better bids.
+            </div>
+
+            {/* ✅ Footer (not full-height, no sticky hacks) */}
+            <div className="pt-4 mt-4 border-t border-gray-200 bg-white">
+              <Button
+                type="submit"
+                loading={isSubmitting}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {isSubmitting ? 'Posting job…' : 'Submit Job'}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </Modal>
   );
-};
+}

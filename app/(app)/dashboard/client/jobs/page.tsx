@@ -89,15 +89,16 @@ export default function JobsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Available Jobs</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Browse and bid on available transport jobs
+       <div>
+        <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
+           <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
+            This is where you’ll see all transport jobs you’ve created —
+            including their status, bids from drivers, and progress updates.
+            Once you post a job, it will appear here.
           </p>
-          <p className="text-xs text-gray-400 mt-1">
-            {jobs.length} job{jobs.length !== 1 ? 's' : ''} available
-          </p>
-        </div>
+      </div>
+
+       </div>
 
         {/* Search and Filter */}
         <div className="mb-6 space-y-3">

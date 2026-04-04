@@ -185,6 +185,11 @@ export interface UpdateJobData extends Partial<CreateJobData> {
   rejectionReason?: string;
 }
 
+// ==================== PENDING JOB TYPES ====================
+export type PendingJob = Job & {
+  status: 'PENDING_APPROVAL' | 'REJECTED';
+};
+
 // ==================== AUTH TYPES ====================
 
 export interface LoginCredentials {

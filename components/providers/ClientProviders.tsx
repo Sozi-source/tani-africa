@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from 'react-hot-toast';
-import { Header } from '@/components/layout/UnifiedHeader';
+import UnifiedHeader from '../layout/UnifiedHeader';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { PageLoader } from '@/components/ui/PageLoader';
@@ -27,7 +27,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<PageLoader />}>
       <AuthProvider>
-        <Header />
+        <UnifiedHeader />
         <main className="min-h-screen">{children}</main>
         <Footer />
         <MobileBottomNav />

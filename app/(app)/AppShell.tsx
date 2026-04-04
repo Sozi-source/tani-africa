@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { Sidebar } from '@/components/layout/Sidebar';
-import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
+import UnifiedHeader from '@/components/layout/UnifiedHeader';
 import { DashboardFooter } from '@/components/layout/DashboardFooter';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';

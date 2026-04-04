@@ -14,11 +14,11 @@ import {
 } from 'lucide-react';
 
 interface UnifiedHeaderProps {
-  onMenuClick: () => void;
-  sidebarWidth: number;
+  onMenuClick?: () => void;
+  sidebarWidth?: number;
 }
 
-export function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHeaderProps) {
+export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isAuthenticated, isClient, isDriver, isAdmin } = useAuth();

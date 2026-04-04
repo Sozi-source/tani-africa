@@ -1,54 +1,57 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from '@/lib/api/client';
-import { Bid } from '@/types';
+import { Bid, BidStatus } from '@/types';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 /* =====================================================
-   Internal caches
+   useBids Hook
 ===================================================== */
 
-const bidsCache = new Map<string, Bid[]>();
-const inFlight = new Map<string, Promise<Bid[]>>();
-
 export function useBids() {
-  const { user, isDriver } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const mounted = useRef(true);
+  const { user, token, initializing, isLoggingOut } = useAuth();
+
+  const [bids, setBids] = useState<Bid[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isMounted = useRef(true);
 
   /* ---------------------------------------------------
-     Get bids by job (cached & deduped)
+     Fetch bids for current user
   --------------------------------------------------- */
-  const getBidsByJob = useCallback(async (jobId: string): Promise<Bid[]> => {
-    if (bidsCache.has(jobId)) {
-      return bidsCache.get(jobId)!;
-    }
-
-    if (inFlight.has(jobId)) {
-      return inFlight.get(jobId)!;
+  const fetchMyBids = useCallback(async () => {
+    if (!token || !user || initializing || isLoggingOut) {
+      return;
     }
 
     setLoading(true);
+    setError(null);
 
-    const request = (async () => {
-      try {
-        const res = await apiClient.get(`/bids/job/${jobId}`);
-        const bids: Bid[] = res.data;
-        bidsCache.set(jobId, bids);
-        return bids;
-      } finally {
-        inFlight.delete(jobId);
-        if (mounted.current) setLoading(false);
+    try {
+      const res = await apiClient.get(`/bids/my`);
+      setBids(res.data ?? []);
+    } catch (err: any) {
+      console.error('Error fetching bids:', err);
+      setError(err?.message ?? 'Failed to load bids');
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
       }
-    })();
+    }
+  }, [token, user, initializing, isLoggingOut]);
 
-    inFlight.set(jobId, request);
-    return request;
+  /* ---------------------------------------------------
+     Fetch bids for a job (on‑demand)
+  --------------------------------------------------- */
+  const getBidsByJob = useCallback(async (jobId: string): Promise<Bid[]> => {
+    const res = await apiClient.get(`/jobs/${jobId}/bids`);
+    return res.data ?? [];
   }, []);
 
   /* ---------------------------------------------------
-     Place bid (✅ FIXED)
+     Place bid
   --------------------------------------------------- */
   const placeBid = useCallback(
     async (payload: {
@@ -57,46 +60,52 @@ export function useBids() {
       estimatedDuration?: number;
       message?: string;
     }) => {
-      if (!isDriver || !user?.id) {
-        throw new Error('Only authenticated drivers can place bids');
-      }
-
-      const requestPayload = {
-        jobId: payload.jobId,
-        driverId: user.id,                     // ✅ REQUIRED BY PRISMA
-        price: Number(payload.price),          // ✅ int
-        ...(payload.estimatedDuration
-          ? { estimatedDuration: Number(payload.estimatedDuration) }
-          : {}),
-        ...(payload.message?.trim()
-          ? { message: payload.message.trim() }
-          : {}),
-      };
-
-      const res = await apiClient.post('/bids', requestPayload);
-
-      // ✅ invalidate cache (unique constraint exists)
-      bidsCache.clear();
-
+      const res = await apiClient.post('/bids', payload);
+      await fetchMyBids(); // keep list fresh
       return res.data;
     },
-    [user, isDriver]
+    [fetchMyBids]
   );
 
   /* ---------------------------------------------------
      Update bid status
   --------------------------------------------------- */
   const updateBidStatus = useCallback(
-    async (bidId: string, status: Bid['status']) => {
-      const res = await apiClient.patch(`/bids/${bidId}/status`, { status });
-      bidsCache.clear();
+    async (bidId: string, status: BidStatus) => {
+      const res = await apiClient.patch(`/bids/${bidId}`, { status });
+
+      setBids(prev =>
+        prev.map(bid =>
+          bid.id === bidId ? { ...bid, status } : bid
+        )
+      );
+
       return res.data;
     },
     []
   );
 
+  /* ---------------------------------------------------
+     Lifecycle
+  --------------------------------------------------- */
+  useEffect(() => {
+    isMounted.current = true;
+    fetchMyBids();
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, [fetchMyBids]);
+
+  /* ---------------------------------------------------
+     Public API
+  --------------------------------------------------- */
   return {
+    bids,
     loading,
+    error,
+    refetch: fetchMyBids,
+
     getBidsByJob,
     placeBid,
     updateBidStatus,

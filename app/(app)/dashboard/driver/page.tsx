@@ -1,238 +1,119 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { User as UserType, Job, Bid } from '@/types';
+import { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useJobs } from '@/lib/hooks/useJobs';
-import { useBids } from '@/lib/hooks/useBids';
-import { useVehicles } from '@/lib/hooks/useVehicles';
 
 import { WelcomeBanner } from '../components/WelcomeBanner';
-import { StatCard } from '../components/StatCard';
 import { JobCard } from '../components/JobCard';
 import { DashboardLoader } from '../components/DashboardLoader';
 import { DashboardError } from '../components/DashboardError';
-import { QuickActionCard } from '../components/QuickActionCard';
-import { PlaceBidModal } from '@/components/bids/PlaceBidModal';
 
 import {
-  Package,
   Truck,
-  DollarSign,
-  Hammer,
-  Briefcase,
-  Grid3x3,
-  List,
+  CheckCircle,
+  Clock,
+  Package,
 } from 'lucide-react';
 
-interface DriverDashboardProps {
-  user?: UserType;
-}
+/**
+ * ✅ App Router–compliant Driver Dashboard
+ * - NO props
+ * - Uses Auth Context
+ * - Fully build-safe
+ */
+export default function DriverDashboardPage() {
+  const { user, loading: authLoading, initializing } = useAuth();
+  const { jobs, loading: jobsLoading, error, refetch } = useJobs();
 
-export default function DriverDashboard({ user: propUser }: DriverDashboardProps) {
-  /* ================= AUTH ================= */
-
-  const { user: authUser, loading: authLoading } = useAuth();
-  const user = propUser || authUser;
-
-  /* ================= DATA ================= */
-
-  const {
-    jobs = [],
-    loading: jobsLoading,
-    error: jobsError,
-    refetch: refetchJobs,
-  } = useJobs();
-
-  const {
-    loading: bidsLoading,
-    getBidsByJob,
-  } = useBids();
-
-  const {
-    vehicles = [],
-    loading: vehiclesLoading,
-  } = useVehicles(user?.id);
-
-  /* ================= LOCAL STATE ================= */
-
-  const [driverBids, setDriverBids] = useState<Bid[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [showBidModal, setShowBidModal] = useState(false);
-  const [showAllJobs, setShowAllJobs] = useState(false);
-
-  /* ================= FETCH DRIVER BIDS ================= */
-
-  useEffect(() => {
-    if (!user?.id || jobs.length === 0) return;
-
-    let cancelled = false;
-
-    const loadBids = async () => {
-      try {
-        const bidsByJob = await Promise.all(
-          jobs.map(j => getBidsByJob(j.id))
-        );
-
-        const allBids = bidsByJob.flat();
-        const myBids = allBids.filter(
-          b => b.driverId === user.id
-        );
-
-        if (!cancelled) setDriverBids(myBids);
-      } catch {
-        // silently fail — dashboard still works
-      }
-    };
-
-    loadBids();
-    return () => {
-      cancelled = true;
-    };
-  }, [jobs, user?.id, getBidsByJob]);
-
-  /* ================= DERIVED DATA ================= */
-
-  const loading =
-    authLoading || jobsLoading || bidsLoading || vehiclesLoading;
+  const loading = initializing || authLoading || jobsLoading;
+  const jobsArray = Array.isArray(jobs) ? jobs : [];
 
   const stats = useMemo(() => {
-    const myJobs = jobs.filter(j => j.driverId === user?.id);
+    if (!user?.id) {
+      return { active: [], completed: [] };
+    }
 
-    const availableJobs = jobs.filter(j => j.status === 'BIDDING');
-    const activeJobs = myJobs.filter(j => j.status === 'ACTIVE');
-
-    const earnings = myJobs
-      .filter(j => j.status === 'COMPLETED')
-      .reduce((sum, j) => sum + (j.price || 0), 0);
+    const myJobs = jobsArray.filter(j => j.driverId === user.id);
 
     return {
-      myBids: driverBids,
-      availableJobs,
-      activeJobs,
-      earnings,
+      active: myJobs.filter(j =>
+        ['BIDDING', 'ACTIVE'].includes(j.status)
+      ),
+      completed: myJobs.filter(j => j.status === 'COMPLETED'),
     };
-  }, [jobs, driverBids, user?.id]);
-
-  /* ================= GUARDS ================= */
+  }, [jobsArray, user?.id]);
 
   if (loading) return <DashboardLoader />;
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <DashboardError
-          message="User not found. Please log in again."
-          onRetry={() => (window.location.href = '/auth/login')}
-        />
-      </div>
+      <DashboardError
+        message="Session expired. Please sign in again."
+        onRetry={() => (window.location.href = '/auth/login')}
+      />
     );
   }
 
-  if (jobsError) {
-    return <DashboardError message={jobsError} onRetry={refetchJobs} />;
+  if (error) {
+    return <DashboardError message={error} onRetry={refetch} />;
   }
 
-  const displayedJobs = showAllJobs
-    ? stats.availableJobs
-    : stats.availableJobs.slice(0, 6);
-
-  /* ================= RENDER ================= */
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-4 py-6 space-y-8">
+    <div className="min-h-screen bg-gray-50 p-6 space-y-8">
+      <WelcomeBanner
+        firstName={user.firstName || 'Driver'}
+        role="DRIVER"
+        subtitle="Manage your bids and active deliveries"
+      />
 
-        <WelcomeBanner
-          firstName={user.firstName || 'Driver'}
-          role="DRIVER"
-          subtitle="Find loads, place bids, and grow your transport business"
-        />
-
-        {/* ===== Stats ===== */}
-        <section>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard
-              title="Available Jobs"
-              value={stats.availableJobs.length}
-              icon={Package}
-            />
-            <StatCard
-              title="Active Jobs"
-              value={stats.activeJobs.length}
-              icon={Truck}
-            />
-            <StatCard
-              title="My Bids"
-              value={stats.myBids.length}
-              icon={Hammer}
-            />
-            <StatCard
-              title="Total Earnings"
-              value={`KES ${stats.earnings.toLocaleString()}`}
-              icon={DollarSign}
-            />
-          </div>
-        </section>
-
-        {/* ===== Available Jobs ===== */}
-        <section>
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-sm font-semibold">Available Jobs</h2>
-
-            <div className="flex gap-2">
-              <button onClick={() => setViewMode('grid')}>
-                <Grid3x3 className="h-4 w-4" />
-              </button>
-              <button onClick={() => setViewMode('list')}>
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <div
-            className={`grid gap-4 ${
-              viewMode === 'grid'
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                : 'grid-cols-1'
-            }`}
-          >
-            {displayedJobs.map(job => (
-              <JobCard
-                key={job.id}
-                job={job}
-                showBidButton
-                onPlaceBid={jobItem => {
-                  setSelectedJob(jobItem);
-                  setShowBidModal(true);
-                }}
-              />
-            ))}
-          </div>
-        </section>
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-5xl">
+        <Stat icon={Truck} label="Active Jobs" value={stats.active.length} />
+        <Stat icon={CheckCircle} label="Completed" value={stats.completed.length} />
+        <Stat icon={Clock} label="Pending" value={stats.active.length} />
       </div>
 
-      {/* ===== Bid Modal ===== */}
-      {selectedJob && (
-        <PlaceBidModal
-          isOpen={showBidModal}
-          onClose={() => {
-            setShowBidModal(false);
-            setSelectedJob(null);
-          }}
-          jobId={selectedJob.id}
-          jobTitle={
-            selectedJob.title ??
-            `Transport from ${selectedJob.pickUpLocation}`
-          }
-          onSuccess={async () => {
-            await refetchJobs();
-            setShowBidModal(false);
-            setSelectedJob(null);
-          }}
-        />
-      )}
+      {/* Jobs */}
+      <section className="space-y-4 max-w-5xl">
+        <h2 className="text-lg font-semibold text-gray-900">Your Jobs</h2>
+
+        {stats.active.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-white p-12 text-center text-gray-500">
+            <Package className="mx-auto h-10 w-10 mb-3 text-gray-300" />
+            No jobs assigned yet. Keep bidding to win deliveries.
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {stats.active.map(job => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/* ✅ Local stat component (safe) */
+function Stat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: any;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm border flex items-center gap-3">
+      <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-xl font-bold text-gray-900">{value}</p>
+      </div>
     </div>
   );
 }

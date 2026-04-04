@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import apiClient, { extractArray } from '@/lib/api/client';
-import { Job } from '@/types';
+import { Job, CreateJobData } from '@/types';
 import { mapApiJob } from '@/lib/mappers/jobMapper';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 /* =====================================================
    Module-level cache (shared across hook instances)
@@ -18,6 +19,8 @@ let fetchPromise: Promise<void> | null = null;
 ===================================================== */
 
 export function useJobs() {
+  const { token, initializing, isLoggingOut } = useAuth();
+
   const [jobs, setJobs] = useState<Job[]>(cachedJobs ?? []);
   const [loading, setLoading] = useState<boolean>(!cachedJobs);
   const [error, setError] = useState<string | null>(null);
@@ -25,60 +28,67 @@ export function useJobs() {
   const isMounted = useRef(true);
 
   /* ---------------------------------------------------
-     Fetch all jobs (cache-aware, deduplicated)
+     Fetch all jobs (auth-aware, cache-aware)
   --------------------------------------------------- */
-  const fetchJobs = useCallback(async (forceRefresh = false) => {
-    if (cachedJobs && !forceRefresh && !isFetching) {
-      if (isMounted.current) {
-        setJobs(cachedJobs);
-        setLoading(false);
+  const fetchJobs = useCallback(
+    async (forceRefresh = false) => {
+      // ✅ Do not fetch during logout / auth restore / unauthenticated
+      if (!token || initializing || isLoggingOut) {
+        return;
       }
-      return;
-    }
 
-    if (fetchPromise) {
-      setLoading(true);
-      await fetchPromise;
-
-      if (cachedJobs && isMounted.current) {
-        setJobs(cachedJobs);
-        setLoading(false);
-      }
-      return;
-    }
-
-    isFetching = true;
-    setLoading(true);
-    setError(null);
-
-    fetchPromise = (async () => {
-      try {
-        const response = await apiClient.get('/jobs');
-        const rawJobs = extractArray<any>(response);
-
-        const normalizedJobs: Job[] = rawJobs.map(mapApiJob);
-        cachedJobs = normalizedJobs;
-
+      if (cachedJobs && !forceRefresh && !isFetching) {
         if (isMounted.current) {
-          setJobs(normalizedJobs);
-        }
-      } catch (err: any) {
-        console.error('Error fetching jobs:', err);
-        if (isMounted.current) {
-          setError(err?.message ?? 'Failed to load jobs');
-          setJobs([]);
-        }
-      } finally {
-        isFetching = false;
-        fetchPromise = null;
-        if (isMounted.current) {
+          setJobs(cachedJobs);
           setLoading(false);
         }
+        return;
       }
-    })();
 
-    await fetchPromise;
-  }, []);
+      if (fetchPromise) {
+        setLoading(true);
+        await fetchPromise;
+        if (cachedJobs && isMounted.current) {
+          setJobs(cachedJobs);
+          setLoading(false);
+        }
+        return;
+      }
+
+      isFetching = true;
+      setLoading(true);
+      setError(null);
+
+      fetchPromise = (async () => {
+        try {
+          const response = await apiClient.get('/jobs');
+          const rawJobs = extractArray<any>(response);
+          const normalizedJobs = rawJobs.map(mapApiJob);
+
+          cachedJobs = normalizedJobs;
+
+          if (isMounted.current) {
+            setJobs(normalizedJobs);
+          }
+        } catch (err: any) {
+          if (err?.response?.status !== 401 && isMounted.current) {
+            console.error('Error fetching jobs:', err);
+            setError(err?.message ?? 'Failed to load jobs');
+            setJobs([]);
+          }
+        } finally {
+          isFetching = false;
+          fetchPromise = null;
+          if (isMounted.current) {
+            setLoading(false);
+          }
+        }
+      })();
+
+      await fetchPromise;
+    },
+    [token, initializing, isLoggingOut]
+  );
 
   /* ---------------------------------------------------
      Fetch a single job by ID (cache-first)
@@ -99,7 +109,43 @@ export function useJobs() {
   }, []);
 
   /* ---------------------------------------------------
-     Update job status (supports admin metadata)
+     ✅ Create job (NEW)
+  --------------------------------------------------- */
+  const createJob = useCallback(
+    async (data: CreateJobData): Promise<Job> => {
+      if (!token || isLoggingOut) {
+        throw new Error('Not authenticated');
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await apiClient.post('/jobs', data);
+        const newJob = mapApiJob(response.data);
+
+        // ✅ Update cache + state optimistically
+        cachedJobs = cachedJobs ? [newJob, ...cachedJobs] : [newJob];
+
+        if (isMounted.current) {
+          setJobs(cachedJobs);
+        }
+
+        return newJob;
+      } catch (err: any) {
+        setError(err?.message ?? 'Failed to create job');
+        throw err;
+      } finally {
+        if (isMounted.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [token, isLoggingOut]
+  );
+
+  /* ---------------------------------------------------
+     Update job status
   --------------------------------------------------- */
   const updateJobStatus = useCallback(
     async (
@@ -156,12 +202,15 @@ export function useJobs() {
   --------------------------------------------------- */
   useEffect(() => {
     isMounted.current = true;
-    fetchJobs();
+
+    if (token && !initializing && !isLoggingOut) {
+      fetchJobs();
+    }
 
     return () => {
       isMounted.current = false;
     };
-  }, [fetchJobs]);
+  }, [fetchJobs, token, initializing, isLoggingOut]);
 
   /* ---------------------------------------------------
      Public API
@@ -175,5 +224,6 @@ export function useJobs() {
     refetch,
     getJobById,
     updateJobStatus,
+    createJob, // ✅ NOW AVAILABLE
   };
 }

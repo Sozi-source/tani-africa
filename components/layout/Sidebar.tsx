@@ -49,8 +49,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = isClient
     ? [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'My Shipments', href: '/jobs/my', icon: Package },
-        { name: 'Post Shipment', href: '/dashboard/clientjobs/create', icon: PlusCircle },
+        { name: 'My Shipments', href: '/dashboard/client/jobs', icon: Package },
+        { name: 'Post Shipment', href: '/dashboard/client/jobs/create', icon: PlusCircle },
       ]
     : isDriver
     ? [

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { User as UserType } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useJobs } from '@/lib/hooks/useJobs';
 
@@ -29,19 +28,14 @@ import {
   Calendar,
 } from 'lucide-react';
 
-interface ClientDashboardProps {
-  user?: UserType;
-}
-
-export default function ClientDashboard({ user: propUser }: ClientDashboardProps) {
-  const { user: authUser, loading: authLoading } = useAuth();
-  const user = propUser || authUser;
-
+export default function ClientDashboardPage() {
+  const { user, loading: authLoading, initializing } = useAuth();
   const { jobs, loading: jobsLoading, error, refetch } = useJobs();
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showAllJobs, setShowAllJobs] = useState(false);
 
-  const loading = authLoading || jobsLoading;
+  const loading = initializing || authLoading || jobsLoading;
   const jobsArray = Array.isArray(jobs) ? jobs : [];
 
   const stats = useMemo(() => {
@@ -60,11 +54,19 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
       ['SUBMITTED', 'BIDDING', 'ACTIVE'].includes(job.status)
     );
     const completedJobs = userJobs.filter(job => job.status === 'COMPLETED');
-    const totalBids = userJobs.reduce((sum, job) => sum + (job.bids?.length || 0), 0);
-    const totalSpent = userJobs.reduce((sum, job) => sum + (job.price || 0), 0);
+    const totalBids = userJobs.reduce(
+      (sum, job) => sum + (job.bids?.length || 0),
+      0
+    );
+    const totalSpent = userJobs.reduce(
+      (sum, job) => sum + (job.price || 0),
+      0
+    );
 
     return { userJobs, activeJobs, completedJobs, totalBids, totalSpent };
   }, [jobsArray, user?.id]);
+
+  /* ================= LOADING / ERROR ================= */
 
   if (loading) return <DashboardLoader />;
 
@@ -72,7 +74,7 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <DashboardError
-          message="User not found. Please log in again."
+          message="Session expired. Please sign in again."
           onRetry={() => (window.location.href = '/auth/login')}
         />
       </div>
@@ -85,6 +87,8 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
     ? stats.userJobs
     : stats.userJobs.slice(0, 6);
 
+  /* ================= RENDER ================= */
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-8">
@@ -96,7 +100,7 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
           subtitle="Manage your shipments and track performance"
         />
 
-        {/* ===== Stats Section ===== */}
+        {/* ===== Performance Overview ===== */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-black">
@@ -104,7 +108,12 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
             </h2>
             <div className="flex items-center gap-1 text-sm text-gray-500">
               <Calendar className="h-4 w-4" />
-              <span>{new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+              <span>
+                {new Date().toLocaleDateString('en-US', {
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
             </div>
           </div>
 
@@ -144,7 +153,7 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <QuickActionCard
-              href="/jobs/create"
+              href="/dashboard/client/jobs/create"
               icon={<PlusCircle />}
               title="Post New Shipment"
               description="Create a shipment request for drivers to bid on"
@@ -231,7 +240,7 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
             <p className="text-gray-500 mb-6">
               Post your first shipment to start receiving bids.
             </p>
-            <Link href="/jobs/create">
+            <Link href="/dashboard/client/jobs/create">
               <Button className="bg-orange-600 hover:bg-orange-700 text-white gap-2">
                 <PlusCircle className="h-4 w-4" />
                 Post Your First Shipment
@@ -247,7 +256,9 @@ export default function ClientDashboard({ user: propUser }: ClientDashboardProps
               <div className="flex items-center gap-2 text-gray-600">
                 <TrendingUp className="h-4 w-4" />
                 Jobs
-                <span className="font-semibold text-black">{stats.userJobs.length}</span>
+                <span className="font-semibold text-black">
+                  {stats.userJobs.length}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Wallet className="h-4 w-4" />
