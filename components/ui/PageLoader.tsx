@@ -1,7 +1,7 @@
 'use client';
 
 interface PageLoaderProps {
-  isLoading: boolean;
+  isLoading?: boolean;
 }
 
 export function PageLoader({ isLoading }: PageLoaderProps) {
