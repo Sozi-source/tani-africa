@@ -64,16 +64,19 @@ export const adminAPI = {
   /* ================= DRIVER APPROVALS ================= */
 
   async getPendingDrivers(): Promise<PendingDriver[]> {
-    const res = await apiClient.get('/admin/drivers/pending');
+    // ✅ FIXED: Use correct endpoint from API docs
+    const res = await apiClient.get('/driver-applications/pending');
     return extractArray<PendingDriver>(res);
   },
 
   async approveDriver(userId: string, notes?: string): Promise<void> {
-    await apiClient.post(`/admin/drivers/${userId}/approve`, { notes });
+    // ✅ FIXED: Use PATCH method and correct endpoint
+    await apiClient.patch(`/driver-applications/${userId}/approve`, { notes });
   },
 
   async rejectDriver(userId: string, reason: string): Promise<void> {
-    await apiClient.post(`/admin/drivers/${userId}/reject`, { reason });
+    // ✅ FIXED: Use PATCH method and correct endpoint
+    await apiClient.patch(`/driver-applications/${userId}/reject`, { reason });
   },
 
   /* ================= JOB APPROVALS ================= */

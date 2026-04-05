@@ -9,7 +9,7 @@ import UnifiedHeader from '@/components/layout/UnifiedHeader';
 import { DashboardFooter } from '@/components/layout/DashboardFooter';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { LogoutLoader } from '@/components/ui/LogoutLoader';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -81,12 +81,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onMenuClick={() => setIsSidebarOpen(true)}
             sidebarWidth={sidebarWidth}
           />
-
-          {/* Breadcrumb pinned directly below the header */}
-          <div className="px-4 py-2 sm:px-6 lg:px-8 border-t border-gray-100">
-            <Breadcrumb />
-          </div>
-        </div>
+       </div>
 
         {/* ===== Main content — offset for header + breadcrumb bar ===== */}
         <main className="flex-1" style={{ paddingTop: '96px' }}>

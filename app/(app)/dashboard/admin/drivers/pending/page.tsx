@@ -7,12 +7,11 @@ import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { 
   Eye, Mail, Phone, Shield, Truck, Clock, CheckCircle, 
-  XCircle, UserCheck, Calendar, FileText, Search, AlertCircle
+  XCircle, UserCheck, FileText, Search, AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
-// ✅ Define the driver type for the component
 interface Driver {
   id: string;
   userId: string;
@@ -21,7 +20,6 @@ interface Driver {
     lastName: string;
     email: string;
     phone?: string | null;
-    drivingLicense?: string | null;
   };
   licenseNumber: string;
   vehicleType?: string;
@@ -45,61 +43,56 @@ export default function PendingDriversPage() {
   }, []);
 
   const fetchDrivers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const data = await adminAPI.getPendingDrivers();
-      console.log('Raw response data:', data);
-      
-      const mappedDrivers: Driver[] = [];
-      
-      if (Array.isArray(data)) {
-        for (const item of data) {
-          // Handle both possible response structures
-          const userId = (item as any).userId || (item as any).id;
-          const userData = (item as any).user || item;
-          const applicationData = (item as any).application || (item as any).driverApplication || {};
-          
-          mappedDrivers.push({
-            id: userId,
-            userId: userId,
-            user: {
-              firstName: userData?.firstName || '',
-              lastName: userData?.lastName || '',
-              email: userData?.email || '',
-              phone: userData?.phone,
-              drivingLicense: userData?.drivingLicense,
-            },
-            licenseNumber: applicationData?.licenseNumber || (item as any).licenseNumber || 'Not provided',
-            vehicleType: applicationData?.vehicleType || (item as any).vehicleType,
-            experienceYears: applicationData?.experienceYears || (item as any).experienceYears,
-            status: (item as any).status || 'PENDING',
-            appliedAt: (item as any).submittedAt || (item as any).appliedAt || new Date().toISOString(),
-          });
-        }
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const data = await adminAPI.getPendingDrivers();
+    console.log('Raw response data:', data);
+    
+    const mappedDrivers: Driver[] = [];
+    
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        // Type assertion to handle the unknown structure
+        const driverItem = item as any;
+        
+        mappedDrivers.push({
+          id: driverItem.userId || driverItem.id,
+          userId: driverItem.userId || driverItem.id,
+          user: {
+            firstName: driverItem.user?.firstName || driverItem.firstName || '',
+            lastName: driverItem.user?.lastName || driverItem.lastName || '',
+            email: driverItem.user?.email || driverItem.email || '',
+            phone: driverItem.user?.phone || driverItem.phone || null,
+          },
+          licenseNumber: driverItem.licenseNumber || 'Not provided',
+          vehicleType: driverItem.vehicleType,
+          experienceYears: driverItem.experienceYears,
+          status: driverItem.status || 'PENDING',
+          appliedAt: driverItem.appliedAt || driverItem.submittedAt || new Date().toISOString(),
+        });
       }
-      
-      console.log('Mapped drivers:', mappedDrivers);
-      setDrivers(mappedDrivers);
-    } catch (err: any) {
-      console.error('Fetch error details:', err);
-      setError(err?.response?.data?.message || err?.message || 'Failed to load drivers');
-      toast.error('Failed to load drivers');
-    } finally { 
-      setLoading(false); 
     }
-  };
+    
+    console.log('Mapped drivers:', mappedDrivers);
+    setDrivers(mappedDrivers);
+  } catch (err: any) {
+    console.error('Fetch error:', err);
+    setError(err?.response?.data?.message || 'Failed to load drivers');
+    toast.error('Failed to load drivers');
+  } finally { 
+    setLoading(false); 
+  }
+};
 
   const handleApprove = async (userId: string) => {
     setProcessingId(userId);
     try {
-      console.log('Approving driver:', userId);
       await adminAPI.approveDriver(userId);
       toast.success('Driver approved successfully');
       await fetchDrivers();
     } catch (err: any) {
-      console.error('Approve error details:', err);
       toast.error(err?.response?.data?.message || 'Failed to approve driver');
     } finally {
       setProcessingId(null);
@@ -120,7 +113,6 @@ export default function PendingDriversPage() {
     
     setProcessingId(selectedDriver.userId);
     try {
-      console.log('Rejecting driver:', selectedDriver.userId, rejectionReason);
       await adminAPI.rejectDriver(selectedDriver.userId, rejectionReason);
       toast.success('Driver rejected');
       setShowRejectModal(false);
@@ -128,7 +120,6 @@ export default function PendingDriversPage() {
       setRejectionReason('');
       await fetchDrivers();
     } catch (err: any) {
-      console.error('Reject error details:', err);
       toast.error(err?.response?.data?.message || 'Failed to reject driver');
     } finally {
       setProcessingId(null);
