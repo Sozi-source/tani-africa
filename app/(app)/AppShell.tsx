@@ -1,3 +1,4 @@
+// app/(app)/AppShell.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,13 +8,13 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import UnifiedHeader from '@/components/layout/UnifiedHeader';
 import { DashboardFooter } from '@/components/layout/DashboardFooter';
 import { PageLoader } from '@/components/ui/PageLoader';
+import { LogoutLoader } from '@/components/ui/LogoutLoader';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 
 import { useAuth } from '@/context/AuthContext';
-import { usePageLoader } from '@/lib/hooks/usePageLoader';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { initializing, loading } = useAuth(); // ✅ Use 'loading' not 'isLoading'
+  const { initializing, loading, isLoggingOut } = useAuth();
   const pathname = usePathname();
 
   /* ================= Sidebar & Responsive ================= */
@@ -35,11 +36,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, []);
 
-  /* ================= Loader Control ================= */
-
-  // Show loader during auth init, API calls, or until layout is ready
-  const showLoader = initializing || loading || !isLayoutReady;
-
   /* ================= Auth Pages Bypass ================= */
 
   const isAuthPage = pathname.startsWith('/auth');
@@ -47,14 +43,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  /* ================= Loader Gate ================= */
-  // Loader covers everything - no layout elements visible
+  /* ================= Logout Loader (Highest Priority) ================= */
+  if (isLoggingOut) {
+    return <LogoutLoader />;
+  }
+
+  /* ================= Regular Loader ================= */
+  const showLoader = initializing || loading || !isLayoutReady;
   if (showLoader) {
     return <PageLoader isLoading={true} />;
   }
 
   /* ================= Layout ================= */
-  // Only render layout after loader is done
   const sidebarWidth = isMobile ? 0 : isSidebarCollapsed ? 72 : 280;
 
   return (

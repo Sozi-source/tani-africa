@@ -16,6 +16,7 @@ import {
   Calendar,
   Eye,
   Truck,
+  Package,
 } from 'lucide-react';
 
 import {
@@ -62,12 +63,12 @@ export const JobCard: React.FC<JobCardProps> = ({
 
   return (
     <>
-      <Card className="h-full">
-        <CardBody className="p-4 flex flex-col h-full">
+      <Card className="h-full transition-all duration-300 hover:shadow-lg border-l-4 border-l-maroon-600">
+        <CardBody className="p-4 sm:p-5 flex flex-col h-full">
           {/* ===== Status & Time ===== */}
           <div className="flex justify-between items-center mb-3">
             <span
-              className={`text-xs px-2 py-1 rounded-full font-medium ${statusUI.color}`}
+              className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusUI.color}`}
             >
               {statusUI.label}
             </span>
@@ -79,28 +80,32 @@ export const JobCard: React.FC<JobCardProps> = ({
           </div>
 
           {/* ===== Title ===== */}
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-base sm:text-lg">
             {job.title || 'Transport Job'}
           </h3>
 
           {/* ===== Locations ===== */}
-          <div className="text-sm text-gray-600 mb-2 flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-green-600" />
-            {job.pickUpLocation} → {job.dropOffLocation}
+          <div className="text-sm text-gray-600 mb-2 flex items-start gap-2">
+            <MapPin className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+            <span className="flex-1">
+              {job.pickUpLocation} → {job.dropOffLocation}
+            </span>
           </div>
 
           {/* ===== Schedule ===== */}
           <div className="text-sm text-gray-600 mb-2 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-red-600" />
-            {job.scheduledDate
-              ? new Date(job.scheduledDate).toLocaleDateString()
-              : 'Flexible'}
+            <Calendar className="h-4 w-4 text-maroon-500 flex-shrink-0" />
+            <span>
+              {job.scheduledDate
+                ? new Date(job.scheduledDate).toLocaleDateString()
+                : 'Flexible'}
+            </span>
           </div>
 
           {/* ===== Price ===== */}
           {job.price != null && (
             <div className="mt-2 mb-4">
-              <span className="text-xl font-bold text-red-600">
+              <span className="text-xl sm:text-2xl font-bold text-green-600">
                 {formatCurrency(job.price)}
               </span>
             </div>
@@ -109,7 +114,7 @@ export const JobCard: React.FC<JobCardProps> = ({
           {/* ===== Actions ===== */}
           <div className="mt-auto space-y-2">
             <Link href={detailsHref}>
-              <Button variant="outline" fullWidth>
+              <Button variant="outline" fullWidth className="border-maroon-200 hover:border-maroon-300 hover:bg-maroon-50">
                 <Eye className="h-4 w-4 mr-1" />
                 View Details
               </Button>
@@ -120,6 +125,7 @@ export const JobCard: React.FC<JobCardProps> = ({
                 fullWidth
                 variant="primary"
                 onClick={() => setShowBidModal(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
               >
                 <Truck className="h-4 w-4 mr-1" />
                 Place Bid

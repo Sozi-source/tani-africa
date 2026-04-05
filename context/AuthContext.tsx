@@ -26,7 +26,6 @@ export interface AuthContextType {
   token: string | null;
   loading: boolean;
   initializing: boolean;
-  isLoggingOut: boolean;
 
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
   register: (userData: RegisterData) => Promise<User>;
@@ -59,10 +58,8 @@ export const useAuth = (): AuthContextType => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-
   const [loading, setLoading] = useState<boolean>(false);
   const [initializing, setInitializing] = useState<boolean>(true);
-  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
 
   /* ================= Restore session ================= */
 
@@ -105,31 +102,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: apiUser.email,
         firstName: apiUser.firstName ?? '',
         lastName: apiUser.lastName ?? '',
-        role:
-          (apiUser.role?.toUpperCase() as User['role']) ??
-          'CLIENT',
+        role: (apiUser.role?.toUpperCase() as User['role']) ?? 'CLIENT',
         phone: apiUser.phone,
         photo: apiUser.photo,
         isActive: apiUser.isActive !== false,
-        createdAt:
-          apiUser.createdAt ?? new Date().toISOString(),
-        updatedAt:
-          apiUser.updatedAt ?? new Date().toISOString(),
+        createdAt: apiUser.createdAt ?? new Date().toISOString(),
+        updatedAt: apiUser.updatedAt ?? new Date().toISOString(),
       };
 
-      // ✅ CORRECT: refreshToken is optional
-      authAPI.setAuthData(
-        accessToken,
-        refreshToken,
-        normalizedUser
-      );
-
+      authAPI.setAuthData(accessToken, refreshToken, normalizedUser);
       setToken(accessToken);
       setUser(normalizedUser);
 
-      toast.success(
-        `Welcome ${normalizedUser.firstName || normalizedUser.role}!`
-      );
+      toast.success(`Welcome ${normalizedUser.firstName || normalizedUser.role}!`);
 
       return {
         accessToken,
@@ -138,9 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     } catch (err: any) {
       toast.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Login failed'
+        err?.response?.data?.message || err?.message || 'Login failed'
       );
       throw err;
     } finally {
@@ -150,9 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* ================= Register ================= */
 
-  const register = async (
-    userData: RegisterData
-  ): Promise<User> => {
+  const register = async (userData: RegisterData): Promise<User> => {
     setLoading(true);
     try {
       const user = await authAPI.register(userData);
@@ -160,9 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return user;
     } catch (err: any) {
       toast.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Registration failed'
+        err?.response?.data?.message || err?.message || 'Registration failed'
       );
       throw err;
     } finally {
@@ -173,27 +152,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /* ================= Logout ================= */
 
   const logout = () => {
-    // ✅ Stop application rendering immediately
-    setIsLoggingOut(true);
-
-    // ✅ Clear all client auth traces
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // ✅ Clear cookies (non‑httpOnly)
-    document.cookie.split(';').forEach(cookie => {
-      const [name] = cookie.split('=');
-      if (name?.trim()) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      }
-    });
-
-    // ✅ Clear in‑memory state
-    setUser(null);
-    setToken(null);
-
-    // ✅ HARD redirect — cannot be overridden
-    window.location.replace('/auth/login');
+    // Dispatch custom event to trigger full-screen logout loader
+    window.dispatchEvent(new CustomEvent('app:logout'));
+    
+    // Note: The root layout handles all cleanup and redirect
+    // This ensures the professional loader stays visible
   };
 
   /* =====================================================
@@ -205,12 +168,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     token,
     loading,
     initializing,
-    isLoggingOut,
-
     login,
     register,
     logout,
-
     isAuthenticated: Boolean(user && token),
     isClient: user?.role === 'CLIENT',
     isDriver: user?.role === 'DRIVER',

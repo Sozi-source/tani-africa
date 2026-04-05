@@ -6,11 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { 
-  Menu, Bell, HelpCircle, User, LogOut, Settings, 
+  Menu, HelpCircle, User, LogOut, Settings, 
   LayoutDashboard, Briefcase, Truck, Shield, Gavel, 
   Users, ChevronDown, Package, Clock, Award, 
   BarChart3, FileText, CreditCard, MessageCircle,
-  Home, Star, TrendingUp, Wallet, Car, MapPin
+  Home, Star, TrendingUp, Wallet, Car, MapPin, PlusCircle
 } from 'lucide-react';
 
 interface UnifiedHeaderProps {
@@ -23,7 +23,6 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
   const router = useRouter();
   const { user, logout, isAuthenticated, isClient, isDriver, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(3);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -57,14 +56,13 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
     return 'Tani Africa';
   };
 
-  // Role-based navigation items (max 4 per role)
+  // Role-based navigation items
   const getRoleNavItems = () => {
     if (isClient) {
       return [
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { label: 'My Shipments', href: '/jobs/my', icon: Package },
         { label: 'Post Shipment', href: '/jobs/create', icon: PlusCircle },
-
       ];
     }
     if (isDriver) {
@@ -72,7 +70,6 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { label: 'Available Jobs', href: '/jobs', icon: Briefcase },
         { label: 'My Bids', href: '/bids/my', icon: Gavel },
-     
       ];
     }
     if (isAdmin) {
@@ -80,7 +77,6 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
         { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
         { label: 'Users', href: '/dashboard/admin/users', icon: Users },
         { label: 'Driver Approvals', href: '/dashboard/admin/drivers/pending', icon: Shield },
-      
       ];
     }
     return [];
@@ -89,11 +85,11 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
   const roleNavItems = getRoleNavItems();
   const RoleIcon = isClient ? Briefcase : isDriver ? Truck : isAdmin ? Shield : User;
 
-  // Handle logout
+  // Handle logout - just call logout, the layout handles the loader
   const handleLogout = () => {
-    logout();
     setOpen(false);
-    router.push('/auth/login');
+    logout(); // This dispatches the 'app:logout' event
+    // No router.push - layout handles redirect
   };
 
   return (
@@ -151,17 +147,7 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
               <HelpCircle className="h-5 w-5" />
             </button>
 
-            {/* Notifications */}
-            {isAuthenticated && (
-              <button className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
-                <Bell className="h-5 w-5" />
-                {notifications > 0 && (
-                  <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
-                    {notifications > 9 ? '9+' : notifications}
-                  </span>
-                )}
-              </button>
-            )}
+            {/* ❌ NOTIFICATIONS BELL REMOVED */}
 
             {/* User Dropdown */}
             {isAuthenticated ? (
@@ -298,6 +284,3 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
     </>
   );
 }
-
-// Missing import for PlusCircle
-import { PlusCircle } from 'lucide-react';
