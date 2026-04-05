@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePageLoader } from '@/lib/hooks/usePageLoader';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { initializing } = useAuth();
+  const { initializing, loading } = useAuth(); // ✅ Use 'loading' not 'isLoading'
   const pathname = usePathname();
 
   /* ================= Sidebar & Responsive ================= */
@@ -21,6 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLayoutReady, setIsLayoutReady] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -29,10 +30,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLayoutReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   /* ================= Loader Control ================= */
 
-  // ✅ Enforce minimum 3s loader visibility
-  const showLoader = usePageLoader(initializing, 3000);
+  // Show loader during auth init, API calls, or until layout is ready
+  const showLoader = initializing || loading || !isLayoutReady;
 
   /* ================= Auth Pages Bypass ================= */
 
@@ -42,13 +48,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   /* ================= Loader Gate ================= */
-
+  // Loader covers everything - no layout elements visible
   if (showLoader) {
-    return <PageLoader />;
+    return <PageLoader isLoading={true} />;
   }
 
   /* ================= Layout ================= */
-
+  // Only render layout after loader is done
   const sidebarWidth = isMobile ? 0 : isSidebarCollapsed ? 72 : 280;
 
   return (
@@ -68,13 +74,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           sidebarWidth={sidebarWidth}
         />
 
-        {/* ✅ MAIN CONTENT */}
         <main className="pt-16 flex-1">
           <div className="px-4 py-6 sm:px-6 lg:px-8">
-            {/* ✅ Breadcrumbs */}
             <Breadcrumb />
-
-            {/* ✅ Page Content */}
             {children}
           </div>
         </main>
