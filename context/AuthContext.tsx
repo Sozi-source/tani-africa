@@ -26,6 +26,7 @@ export interface AuthContextType {
   token: string | null;
   loading: boolean;
   initializing: boolean;
+  isLoggingOut: boolean;
 
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
   register: (userData: RegisterData) => Promise<User>;
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     token,
     loading,
     initializing,
+    isLoggingOut: false, // This will be managed by the root layout on logout
     login,
     register,
     logout,

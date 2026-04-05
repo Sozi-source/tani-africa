@@ -51,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'My Shipments', href: '/dashboard/client/jobs', icon: Package },
         { name: 'Post Shipment', href: '/dashboard/client/jobs/create', icon: PlusCircle },
+        {name: 'Become a Driver', href: '/dashboard/client/apply', icon: CgDrive }
       ]
     : isDriver
     ? [
@@ -66,8 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { name: 'Jobs', href: '/dashboard/admin/jobs', icon: Briefcase },
         { name: 'Vehicles', href: '/vehicles', icon: Truck },
         { name: 'driver', href: '/dashboard/admin/drivers', icon: CgDrive },
-        { name: 'features', href: '/dashboard/admin/features', icon: Settings },
-        { name: 'testimonials', href: '/dashboard/admin/testimonials', icon: Award },
+       
       ]
     : [];
 
@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <AnimatePresence>
         {isMobile && isOpen && (
           <motion.div
-            className="fixed inset-0 z-40 bg-black/60"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -88,9 +88,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <motion.aside
         className="
           fixed left-0 top-0 z-50 h-full
-          bg-gradient-to-b from-[color:var(--color-primary-600)] 
-          to-[color:var(--color-primary-700)]
-          shadow-xl flex flex-col
+          bg-gradient-to-b from-maroon-800 to-maroon-900
+          shadow-2xl flex flex-col
         "
         animate={{
           width: !isMobile && isCollapsed ? 72 : 280,
@@ -99,18 +98,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         transition={{ type: 'spring', damping: 25 }}
       >
         {/* Logo / Header */}
-        <div className="h-16 flex items-center justify-between px-4">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
           {!isCollapsed && (
             <div className="flex items-center gap-2 text-white">
-              <Truck className="h-6 w-6" />
-              <span className="font-bold">Tani Africa</span>
+              <div className="bg-white/10 rounded-lg p-1.5">
+                <Truck className="h-5 w-5 text-teal-300" />
+              </div>
+              <span className="font-bold text-lg bg-gradient-to-r from-white to-teal-200 bg-clip-text text-transparent">
+                Tani Africa
+              </span>
             </div>
           )}
 
           {!isMobile && (
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="text-white/70 hover:text-white"
+              className="text-white/60 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -121,26 +124,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {isMobile && (
-            <button onClick={onClose}>
-              <X className="h-5 w-5 text-white" />
+            <button onClick={onClose} className="text-white/60 hover:text-white p-1 rounded-lg hover:bg-white/10">
+              <X className="h-5 w-5" />
             </button>
           )}
         </div>
 
         {/* User Card */}
         {!isCollapsed && user && (
-          <div className="mx-3 my-4 rounded-xl bg-white/15 p-3 text-white">
+          <div className="mx-3 my-4 rounded-xl bg-gradient-to-r from-white/15 to-white/5 p-3 text-white backdrop-blur-sm">
             <p className="text-sm font-medium">
               {user.firstName} {user.lastName}
             </p>
-            <p className="text-xs text-white/70 capitalize">
+            <p className="text-xs text-teal-200 mt-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
               {user.role?.toLowerCase()}
             </p>
           </div>
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 space-y-1">
+        <nav className="flex-1 px-2 space-y-1 overflow-y-auto">
           {navItems.map(item => (
             <Link
               key={item.href}
@@ -148,17 +152,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => isMobile && onClose()}
               className={`
                 flex items-center gap-3 rounded-lg px-3 py-2.5
-                transition-all duration-150
+                transition-all duration-200 group
                 ${
                   isActive(item.href)
-                    ? 'bg-gradient-to-r from-[color:var(--color-primary-500)] to-[color:var(--color-secondary-500)] text-white shadow-md'
-                    : 'text-white/75 hover:bg-white/10 hover:text-white'
+                    ? 'bg-gradient-to-r from-maroon-600 to-teal-700 text-white shadow-md'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }
                 ${isCollapsed ? 'justify-center' : ''}
               `}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className={`h-5 w-5 ${isActive(item.href) ? 'text-teal-200' : ''}`} />
               {!isCollapsed && <span className="text-sm">{item.name}</span>}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                  {item.name}
+                </div>
+              )}
             </Link>
           ))}
         </nav>
@@ -171,17 +180,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="
               w-full flex items-center justify-center gap-2
               rounded-xl px-3 py-3
-              bg-white/15 hover:bg-white/25
-              text-white transition
+              bg-white/10 hover:bg-red-500/20
+              text-white/80 hover:text-red-300
+              transition-all duration-200
+              group
             "
           >
             <LogOut className="h-5 w-5" />
             {!isCollapsed && <span>Sign out</span>}
+            {isCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                Sign out
+              </div>
+            )}
           </button>
         </div>
 
         {/* Decorative */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-20">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-10">
           <Sparkles className="h-8 w-8 text-white" />
         </div>
       </motion.aside>

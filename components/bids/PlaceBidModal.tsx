@@ -45,7 +45,6 @@ export function PlaceBidModal({
       return;
     }
 
-    // ✅ Use Math.round to ensure integer — backend uses @IsInt()
     const priceValue = Math.round(Number(price));
     if (!priceValue || priceValue < 100) {
       toast.error('Minimum bid is KES 100');
@@ -56,8 +55,8 @@ export function PlaceBidModal({
     try {
       await placeBid({
         jobId,
-        price: priceValue,                                          // ✅ always an integer
-        estimatedDuration: duration ? Math.round(Number(duration)) : undefined, // ✅ integer or omitted
+        price: priceValue,
+        estimatedDuration: duration ? Math.round(Number(duration)) : undefined,
         message: message.trim() || undefined,
       });
 
@@ -91,16 +90,16 @@ export function PlaceBidModal({
 
         {/* Job Context */}
         {jobTitle && (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <p className="text-xs text-gray-500">Bidding for</p>
-            <p className="font-medium text-gray-900 truncate">{jobTitle}</p>
+          <div className="rounded-lg border-l-4 border-l-teal-500 bg-teal-50 p-3">
+            <p className="text-xs text-teal-600 font-medium">Bidding for</p>
+            <p className="font-semibold text-gray-900 truncate">{jobTitle}</p>
           </div>
         )}
 
         {/* Bid Amount */}
         <div>
           <label className="flex items-center gap-1 text-sm font-medium text-gray-700">
-            <DollarSign className="h-4 w-4 text-gray-500" />
+            <DollarSign className="h-4 w-4 text-maroon-500" />
             Bid Amount (KES)
           </label>
           <input
@@ -110,7 +109,7 @@ export function PlaceBidModal({
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             required
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-red-600 focus:ring-2 focus:ring-red-200"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-maroon-500 focus:ring-2 focus:ring-maroon-200 transition-colors"
             placeholder="e.g. 2500"
           />
           <p className="mt-1 text-xs text-gray-500">Minimum bid is KES 100</p>
@@ -119,7 +118,7 @@ export function PlaceBidModal({
         {/* Estimated Duration */}
         <div>
           <label className="flex items-center gap-1 text-sm font-medium text-gray-700">
-            <Clock className="h-4 w-4 text-gray-500" />
+            <Clock className="h-4 w-4 text-teal-500" />
             Estimated Duration (days)
           </label>
           <input
@@ -128,7 +127,7 @@ export function PlaceBidModal({
             step={1}
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-red-600 focus:ring-2 focus:ring-red-200"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-colors"
             placeholder="e.g. 2"
           />
         </div>
@@ -143,14 +142,14 @@ export function PlaceBidModal({
             rows={3}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-red-600 focus:ring-2 focus:ring-red-200"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-maroon-500 focus:ring-2 focus:ring-maroon-200 transition-colors"
             placeholder="Briefly explain why you are the best choice"
           />
         </div>
 
         {/* Tip */}
-        <div className="flex gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+        <div className="flex gap-2 rounded-lg border-l-4 border-l-green-500 bg-green-50 p-3 text-sm text-green-800">
+          <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-green-600" />
           Clear pricing and a professional message improve your chances of being selected.
         </div>
 
@@ -169,7 +168,7 @@ export function PlaceBidModal({
           <Button
             type="submit"
             loading={loading}
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
           >
             <Send className="h-4 w-4 mr-1" />
             Place Bid

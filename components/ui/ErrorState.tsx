@@ -25,39 +25,33 @@ export function ErrorState({
   variant = 'default',
   className = '',
 }: ErrorStateProps) {
-  // Get variant-specific configurations
   const variantConfig = {
     default: {
       icon: AlertCircle,
-      color: 'red',
-      bgColor: 'bg-red-50',
-      textColor: 'text-red-600',
+      bgColor: 'bg-maroon-50',
+      textColor: 'text-maroon-600',
       title: 'Something went wrong',
     },
     network: {
       icon: WifiOff,
-      color: 'orange',
       bgColor: 'bg-orange-50',
       textColor: 'text-orange-600',
       title: 'Network Error',
     },
     server: {
       icon: Server,
-      color: 'yellow',
       bgColor: 'bg-yellow-50',
       textColor: 'text-yellow-600',
       title: 'Server Error',
     },
     auth: {
       icon: ShieldAlert,
-      color: 'purple',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-600',
+      bgColor: 'bg-teal-50',
+      textColor: 'text-teal-600',
       title: 'Authentication Error',
     },
     'not-found': {
       icon: Truck,
-      color: 'blue',
       bgColor: 'bg-blue-50',
       textColor: 'text-blue-600',
       title: 'Not Found',
@@ -69,16 +63,16 @@ export function ErrorState({
   const displayTitle = title || config.title;
 
   return (
-    <div className={`flex flex-col items-center justify-center p-8 text-center ${className}`}>
-      <div className={`rounded-full ${config.bgColor} p-4 mb-4`}>
-        <DisplayIcon className={`h-10 w-10 ${config.textColor}`} />
+    <div className={`flex flex-col items-center justify-center p-12 text-center ${className}`}>
+      <div className={`rounded-full ${config.bgColor} p-5 mb-5 shadow-sm`}>
+        <DisplayIcon className={`h-12 w-12 ${config.textColor}`} />
       </div>
       
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      <h3 className="text-xl font-semibold text-gray-900 mb-2">
         {displayTitle}
       </h3>
       
-      <p className="text-sm text-gray-500 max-w-md mb-6">
+      <p className="text-sm text-gray-500 max-w-md mb-8">
         {message}
       </p>
       
@@ -96,7 +90,7 @@ export function ErrorState({
         
         {showHome && (
           <Link href="/">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="primary" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               Back to Home
             </Button>

@@ -16,7 +16,7 @@ interface ModalProps {
   cancelText?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isLoading?: boolean;
-  confirmDisabled?: boolean; // Add this prop
+  confirmDisabled?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -31,7 +31,7 @@ export const Modal: React.FC<ModalProps> = ({
   cancelText = 'Cancel',
   size = 'md',
   isLoading = false,
-  confirmDisabled = false, // Add default value
+  confirmDisabled = false,
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -62,29 +62,29 @@ export const Modal: React.FC<ModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-all"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-all"
       onClick={handleBackdropClick}
     >
       <div
         className={twMerge(
-          'w-full rounded-xl bg-white shadow-xl transition-all animate-in fade-in zoom-in duration-200',
+          'w-full rounded-xl bg-white shadow-2xl transition-all animate-in fade-in zoom-in duration-200',
           sizeClasses[size]
         )}
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-maroon-50 to-white rounded-t-xl">
+            <h3 className="text-lg font-semibold text-maroon-800">{title}</h3>
             <button
               onClick={onClose}
-              className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-maroon-100 hover:text-maroon-600"
               disabled={isLoading}
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         )}
-        <div className="px-6 py-4">{children}</div>
-        <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+        <div className="px-6 py-5">{children}</div>
+        <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-xl">
           {showCancelButton && (
             <Button 
               variant="outline" 

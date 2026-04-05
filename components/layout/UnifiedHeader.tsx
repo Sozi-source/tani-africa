@@ -142,12 +142,6 @@ export default function UnifiedHeader({ onMenuClick, sidebarWidth }: UnifiedHead
           {/* Right Section */}
           <div className="flex items-center gap-1 sm:gap-2">
             
-            {/* Help Button */}
-            <button className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
-              <HelpCircle className="h-5 w-5" />
-            </button>
-
-            {/* ❌ NOTIFICATIONS BELL REMOVED */}
 
             {/* User Dropdown */}
             {isAuthenticated ? (

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CreateJobData } from '@/types';
 
-import { Info, Package } from 'lucide-react';
+import { Info, Package, MapPin, Calendar, Weight, DollarSign } from 'lucide-react';
 
 /* ================= VALIDATION SCHEMA ================= */
 
@@ -110,33 +110,40 @@ export function CreateJobModal({
       title="Post a New Job"
       size="lg"
     >
-      {/* ✅ Centered container */}
       <div className="flex justify-center">
         <div className="w-full max-w-xl">
 
-          {/* ✅ Scrollable body (not full height) */}
           <form
             onSubmit={handleSubmit(handleFormSubmit)}
-            className="space-y-4 max-h-[60vh] overflow-y-auto pr-2"
+            className="space-y-5 max-h-[60vh] overflow-y-auto pr-2"
           >
             {/* Job Title */}
-            <input
-              {...register('title')}
-              placeholder="Job title (optional)"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-600 focus:ring-2 focus:ring-orange-200"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Job Title (Optional)</label>
+              <input
+                {...register('title')}
+                placeholder="e.g., Urgent Delivery to Nairobi"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-maroon-500 focus:ring-2 focus:ring-maroon-200 transition-colors"
+              />
+            </div>
 
             {/* Pickup Location */}
             <div>
-              <input
-                {...register('pickUpLocation')}
-                placeholder="Pickup location *"
-                className={`w-full rounded-lg border px-3 py-2 focus:ring-2 ${
-                  errors.pickUpLocation
-                    ? 'border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:ring-orange-200'
-                }`}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pickup Location <span className="text-maroon-500">*</span>
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  {...register('pickUpLocation')}
+                  placeholder="Enter pickup address"
+                  className={`w-full rounded-lg border pl-10 pr-4 py-2.5 focus:ring-2 transition-colors ${
+                    errors.pickUpLocation
+                      ? 'border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:border-maroon-500 focus:ring-maroon-200'
+                  }`}
+                />
+              </div>
               {errors.pickUpLocation && (
                 <p className="text-xs text-red-500 mt-1">
                   {errors.pickUpLocation.message}
@@ -146,15 +153,21 @@ export function CreateJobModal({
 
             {/* Dropoff Location */}
             <div>
-              <input
-                {...register('dropOffLocation')}
-                placeholder="Dropoff location *"
-                className={`w-full rounded-lg border px-3 py-2 focus:ring-2 ${
-                  errors.dropOffLocation
-                    ? 'border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:ring-orange-200'
-                }`}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dropoff Location <span className="text-maroon-500">*</span>
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  {...register('dropOffLocation')}
+                  placeholder="Enter dropoff address"
+                  className={`w-full rounded-lg border pl-10 pr-4 py-2.5 focus:ring-2 transition-colors ${
+                    errors.dropOffLocation
+                      ? 'border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:border-maroon-500 focus:ring-maroon-200'
+                  }`}
+                />
+              </div>
               {errors.dropOffLocation && (
                 <p className="text-xs text-red-500 mt-1">
                   {errors.dropOffLocation.message}
@@ -164,12 +177,13 @@ export function CreateJobModal({
 
             {/* Description */}
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
               <textarea
                 {...register('description')}
                 rows={4}
                 maxLength={1000}
-                placeholder="Job description (optional)"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-600 focus:ring-2 focus:ring-orange-200"
+                placeholder="Describe the cargo, special instructions, etc."
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-maroon-500 focus:ring-2 focus:ring-maroon-200 transition-colors"
               />
               <p className="text-xs text-gray-500 text-right mt-1">
                 {charCount}/1000 characters
@@ -178,47 +192,64 @@ export function CreateJobModal({
 
             {/* Weight & Budget */}
             <div className="grid grid-cols-2 gap-4">
-              <input
-                type="number"
-                {...register('cargoWeight', { valueAsNumber: true })}
-                placeholder="Weight (kg)"
-                className="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
-              />
-              <input
-                type="number"
-                {...register('price', { valueAsNumber: true })}
-                placeholder="Budget (KES)"
-                className="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                <div className="relative">
+                  <Weight className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="number"
+                    {...register('cargoWeight', { valueAsNumber: true })}
+                    placeholder="Weight"
+                    className="w-full rounded-lg border border-gray-300 pl-10 pr-4 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-colors"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Budget (KES)</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="number"
+                    {...register('price', { valueAsNumber: true })}
+                    placeholder="Budget"
+                    className="w-full rounded-lg border border-gray-300 pl-10 pr-4 py-2.5 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Scheduled Date */}
-            <input
-              type="datetime-local"
-              {...register('scheduledDate')}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-200"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date (Optional)</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="datetime-local"
+                  {...register('scheduledDate')}
+                  className="w-full rounded-lg border border-gray-300 pl-10 pr-4 py-2.5 focus:border-maroon-500 focus:ring-2 focus:ring-maroon-200 transition-colors"
+                />
+              </div>
+            </div>
 
-            {/* Info */}
-            <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800 flex gap-2">
-              <Info className="h-5 w-5 shrink-0" />
+            {/* Info Boxes */}
+            <div className="rounded-lg bg-teal-50 border-l-4 border-teal-500 p-3 text-sm text-teal-800 flex gap-2">
+              <Info className="h-5 w-5 shrink-0 text-teal-600" />
               Your job will be reviewed before going live to drivers.
             </div>
 
-            {/* Tip */}
-            <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800 flex gap-2">
-              <Package className="h-5 w-5 shrink-0" />
+            <div className="rounded-lg bg-green-50 border-l-4 border-green-500 p-3 text-sm text-green-800 flex gap-2">
+              <Package className="h-5 w-5 shrink-0 text-green-600" />
               Clear locations and fair pricing attract better bids.
             </div>
 
-            {/* ✅ Footer (not full-height, no sticky hacks) */}
-            <div className="pt-4 mt-4 border-t border-gray-200 bg-white">
+            {/* Footer */}
+            <div className="pt-4 mt-2 border-t border-gray-200">
               <Button
                 type="submit"
                 loading={isSubmitting}
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                className="w-full bg-maroon-600 hover:bg-maroon-700 text-white"
               >
-                {isSubmitting ? 'Posting job…' : 'Submit Job'}
+                {isSubmitting ? 'Posting job...' : 'Post Job'}
               </Button>
             </div>
           </form>

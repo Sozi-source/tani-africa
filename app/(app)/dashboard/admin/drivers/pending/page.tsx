@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api/admin';
 import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute';
-import { Card, CardBody } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { 
   Eye, Mail, Phone, Shield, Truck, Clock, CheckCircle, 
@@ -13,47 +12,78 @@ import {
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
-interface PendingDriver {
+// ✅ Define the driver type for the component
+interface Driver {
   id: string;
   userId: string;
-  user: { 
-    firstName: string; 
-    lastName: string; 
-    email: string; 
-    phone?: string; 
-    drivingLicense?: string;
-    createdAt: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string | null;
+    drivingLicense?: string | null;
   };
   licenseNumber: string;
   vehicleType?: string;
   experienceYears?: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: string;
   appliedAt: string;
 }
 
 export default function PendingDriversPage() {
-  const [drivers, setDrivers] = useState<PendingDriver[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [selectedDriver, setSelectedDriver] = useState<PendingDriver | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => { 
     fetchDrivers(); 
   }, []);
 
-  // ✅ FIXED: No parameters passed to getPendingDrivers()
   const fetchDrivers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await adminAPI.getPendingDrivers();  // ← NO arguments here!
-      setDrivers(Array.isArray(data) ? data : []);
+      
+      const data = await adminAPI.getPendingDrivers();
+      console.log('Raw response data:', data);
+      
+      const mappedDrivers: Driver[] = [];
+      
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          // Handle both possible response structures
+          const userId = (item as any).userId || (item as any).id;
+          const userData = (item as any).user || item;
+          const applicationData = (item as any).application || (item as any).driverApplication || {};
+          
+          mappedDrivers.push({
+            id: userId,
+            userId: userId,
+            user: {
+              firstName: userData?.firstName || '',
+              lastName: userData?.lastName || '',
+              email: userData?.email || '',
+              phone: userData?.phone,
+              drivingLicense: userData?.drivingLicense,
+            },
+            licenseNumber: applicationData?.licenseNumber || (item as any).licenseNumber || 'Not provided',
+            vehicleType: applicationData?.vehicleType || (item as any).vehicleType,
+            experienceYears: applicationData?.experienceYears || (item as any).experienceYears,
+            status: (item as any).status || 'PENDING',
+            appliedAt: (item as any).submittedAt || (item as any).appliedAt || new Date().toISOString(),
+          });
+        }
+      }
+      
+      console.log('Mapped drivers:', mappedDrivers);
+      setDrivers(mappedDrivers);
     } catch (err: any) {
-      console.error('Fetch error:', err);
+      console.error('Fetch error details:', err);
       setError(err?.response?.data?.message || err?.message || 'Failed to load drivers');
       toast.error('Failed to load drivers');
     } finally { 
@@ -64,17 +94,19 @@ export default function PendingDriversPage() {
   const handleApprove = async (userId: string) => {
     setProcessingId(userId);
     try {
+      console.log('Approving driver:', userId);
       await adminAPI.approveDriver(userId);
       toast.success('Driver approved successfully');
       await fetchDrivers();
     } catch (err: any) {
+      console.error('Approve error details:', err);
       toast.error(err?.response?.data?.message || 'Failed to approve driver');
     } finally {
       setProcessingId(null);
     }
   };
 
-  const handleRejectClick = (driver: PendingDriver) => {
+  const handleRejectClick = (driver: Driver) => {
     setSelectedDriver(driver);
     setShowRejectModal(true);
   };
@@ -88,6 +120,7 @@ export default function PendingDriversPage() {
     
     setProcessingId(selectedDriver.userId);
     try {
+      console.log('Rejecting driver:', selectedDriver.userId, rejectionReason);
       await adminAPI.rejectDriver(selectedDriver.userId, rejectionReason);
       toast.success('Driver rejected');
       setShowRejectModal(false);
@@ -95,16 +128,16 @@ export default function PendingDriversPage() {
       setRejectionReason('');
       await fetchDrivers();
     } catch (err: any) {
+      console.error('Reject error details:', err);
       toast.error(err?.response?.data?.message || 'Failed to reject driver');
     } finally {
       setProcessingId(null);
     }
   };
 
-  // Filter drivers based on search
   const filteredDrivers = drivers.filter(driver => {
     const matchesSearch = searchTerm === '' || 
-      `${driver.user.firstName} ${driver.user.lastName} ${driver.user.email} ${driver.licenseNumber}`.toLowerCase().includes(searchTerm.toLowerCase());
+      `${driver.user?.firstName} ${driver.user?.lastName} ${driver.user?.email} ${driver.licenseNumber}`.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -124,7 +157,7 @@ export default function PendingDriversPage() {
           <p className="text-red-500 font-medium">{error}</p>
           <button 
             onClick={fetchDrivers} 
-            className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="mt-4 px-4 py-2 bg-maroon-600 text-white rounded-lg hover:bg-maroon-700 transition-colors"
           >
             Try Again
           </button>
@@ -146,19 +179,19 @@ export default function PendingDriversPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-            <div className="bg-white rounded-xl p-3 sm:p-4 text-center shadow-sm border border-gray-100">
-              <Clock className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
+            <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-maroon-500 shadow-sm">
+              <Clock className="h-5 w-5 text-maroon-500 mx-auto mb-1" />
               <p className="text-2xl sm:text-3xl font-bold text-gray-900">{drivers.length}</p>
               <p className="text-xs sm:text-sm text-gray-500">Pending</p>
             </div>
-            <div className="bg-white rounded-xl p-3 sm:p-4 text-center shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-green-500 shadow-sm">
               <UserCheck className="h-5 w-5 text-green-500 mx-auto mb-1" />
               <p className="text-2xl sm:text-3xl font-bold text-gray-900">0</p>
               <p className="text-xs sm:text-sm text-gray-500">Approved</p>
             </div>
-            <div className="bg-white rounded-xl p-3 sm:p-4 text-center shadow-sm border border-gray-100">
-              <Shield className="h-5 w-5 text-blue-500 mx-auto mb-1" />
-              <p className="text-2xl sm:text-3xl font-bold text-gray-900">0</p>
+            <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-teal-500 shadow-sm">
+              <Shield className="h-5 w-5 text-teal-500 mx-auto mb-1" />
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{drivers.length}</p>
               <p className="text-xs sm:text-sm text-gray-500">Total</p>
             </div>
           </div>
@@ -172,7 +205,7 @@ export default function PendingDriversPage() {
                 placeholder="Search by name, email, or license..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:border-maroon-500 focus:outline-none focus:ring-2 focus:ring-maroon-500/20"
               />
             </div>
           </div>
@@ -199,14 +232,14 @@ export default function PendingDriversPage() {
                       {/* Header */}
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center">
-                            <Truck className="h-6 w-6 sm:h-7 sm:w-7 text-amber-600" />
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-maroon-100 rounded-full flex items-center justify-center">
+                            <Truck className="h-6 w-6 sm:h-7 sm:w-7 text-maroon-600" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900 text-base sm:text-lg">
-                              {driver.user.firstName} {driver.user.lastName}
+                              {driver.user?.firstName} {driver.user?.lastName}
                             </h3>
-                            <p className="text-xs sm:text-sm text-gray-500">{driver.user.email}</p>
+                            <p className="text-xs sm:text-sm text-gray-500">{driver.user?.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -224,9 +257,9 @@ export default function PendingDriversPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                          <span className="truncate">{driver.user.email}</span>
+                          <span className="truncate">{driver.user?.email}</span>
                         </div>
-                        {driver.user.phone && (
+                        {driver.user?.phone && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
                             <span>{driver.user.phone}</span>
@@ -263,7 +296,7 @@ export default function PendingDriversPage() {
                         <button
                           onClick={() => handleApprove(driver.userId)}
                           disabled={processingId === driver.userId}
-                          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-maroon-600 text-white rounded-lg text-sm font-medium hover:bg-maroon-700 transition-colors disabled:opacity-50"
                         >
                           {processingId === driver.userId ? (
                             <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -291,7 +324,7 @@ export default function PendingDriversPage() {
               <h3 className="text-lg font-semibold text-gray-900">Reject Driver Application</h3>
             </div>
             <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to reject <strong>{selectedDriver.user.firstName} {selectedDriver.user.lastName}</strong>'s application?
+              Are you sure you want to reject <strong>{selectedDriver.user?.firstName} {selectedDriver.user?.lastName}</strong>'s application?
             </p>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -302,7 +335,7 @@ export default function PendingDriversPage() {
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Please provide a reason..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-maroon-500 focus:outline-none focus:ring-2 focus:ring-maroon-500/20"
               />
             </div>
             <div className="flex gap-3">

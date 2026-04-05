@@ -18,7 +18,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label className="mb-2 block text-sm font-medium text-gray-700">
             {label}
-            {required && <span className="ml-1 text-red-500">*</span>}
+            {required && <span className="ml-1 text-maroon-500">*</span>}
           </label>
         )}
         <div className="relative">
@@ -30,7 +30,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={twMerge(
-              'w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200',
+              'w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 transition-all duration-200 focus:border-maroon-500 focus:outline-none focus:ring-2 focus:ring-maroon-200',
               icon && 'pl-10',
               error && 'border-red-500 focus:border-red-500 focus:ring-red-200',
               className

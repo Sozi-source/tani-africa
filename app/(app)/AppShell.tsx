@@ -44,17 +44,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   /* ================= Logout Loader (Highest Priority) ================= */
+
   if (isLoggingOut) {
     return <LogoutLoader />;
   }
 
   /* ================= Regular Loader ================= */
+
   const showLoader = initializing || loading || !isLayoutReady;
   if (showLoader) {
     return <PageLoader isLoading={true} />;
   }
 
   /* ================= Layout ================= */
+
   const sidebarWidth = isMobile ? 0 : isSidebarCollapsed ? 72 : 280;
 
   return (
@@ -69,14 +72,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         className="min-h-screen flex flex-col transition-all duration-300"
         style={{ marginLeft: sidebarWidth }}
       >
-        <UnifiedHeader
-          onMenuClick={() => setIsSidebarOpen(true)}
-          sidebarWidth={sidebarWidth}
-        />
+        {/* ===== Sticky top area: Header + Breadcrumb ===== */}
+        <div
+          className="fixed top-0 right-0 z-20 bg-white border-b shadow-sm"
+          style={{ left: sidebarWidth, transition: 'left 300ms' }}
+        >
+          <UnifiedHeader
+            onMenuClick={() => setIsSidebarOpen(true)}
+            sidebarWidth={sidebarWidth}
+          />
 
-        <main className="pt-16 flex-1">
-          <div className="px-4 py-6 sm:px-6 lg:px-8">
+          {/* Breadcrumb pinned directly below the header */}
+          <div className="px-4 py-2 sm:px-6 lg:px-8 border-t border-gray-100">
             <Breadcrumb />
+          </div>
+        </div>
+
+        {/* ===== Main content — offset for header + breadcrumb bar ===== */}
+        <main className="flex-1" style={{ paddingTop: '96px' }}>
+          <div className="px-4 py-6 sm:px-6 lg:px-8">
             {children}
           </div>
         </main>

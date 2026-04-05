@@ -16,6 +16,8 @@ import {
   AlertCircle,
   RefreshCw,
   MapPin,
+  UserCheck,
+  Truck,
 } from 'lucide-react';
 
 import { DashboardLoader } from '../components/DashboardLoader';
@@ -43,6 +45,8 @@ interface DashboardStats {
   totalRevenue: number;
   completionRate: number;
 }
+
+type ColorVariant = 'maroon' | 'teal' | 'green' | 'yellow';
 
 /* ================= Helpers ================= */
 
@@ -90,8 +94,6 @@ export default function AdminDashboard() {
       const usersArray = extractArray(usersRes?.data);
       const pendingDriversArray = extractArray(driversRes?.data);
 
-      /* ---------- Derived Stats ---------- */
-
       const totalJobs = statsRaw.totalJobs ?? jobsArray.length;
       const activeJobs =
         statsRaw.activeJobs ??
@@ -107,16 +109,12 @@ export default function AdminDashboard() {
           : 0;
 
       setStats({
-        totalUsers:
-          statsRaw.totalUsers ?? usersArray.length,
-        totalClients:
-          statsRaw.totalClients ??
+        totalUsers: statsRaw.totalUsers ?? usersArray.length,
+        totalClients: statsRaw.totalClients ??
           usersArray.filter(u => u.role === 'CLIENT').length,
-        totalDrivers:
-          statsRaw.totalDrivers ??
+        totalDrivers: statsRaw.totalDrivers ??
           usersArray.filter(u => u.role === 'DRIVER').length,
-        pendingDrivers:
-          statsRaw.pendingDrivers ?? pendingDriversArray.length,
+        pendingDrivers: statsRaw.pendingDrivers ?? pendingDriversArray.length,
         pendingJobs: statsRaw.pendingJobs ?? 0,
         totalJobs,
         activeJobs,
@@ -138,13 +136,9 @@ export default function AdminDashboard() {
     }
   };
 
-  /* ---------- Init ---------- */
-
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  /* ---------- Guard ---------- */
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'ADMIN')) {
@@ -152,19 +146,17 @@ export default function AdminDashboard() {
     }
   }, [loading, user, router]);
 
-  /* ---------- States ---------- */
-
   if (loading) return <DashboardLoader />;
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="bg-white p-6 rounded-xl text-center max-w-md">
-          <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-2" />
+        <div className="bg-white p-6 rounded-xl text-center max-w-md shadow-lg border-l-4 border-maroon-500">
+          <AlertCircle className="h-10 w-10 text-maroon-500 mx-auto mb-2" />
           <p className="text-sm text-gray-600 mb-4">{error}</p>
           <button
             onClick={fetchDashboardData}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg"
+            className="px-4 py-2 bg-maroon-600 hover:bg-maroon-700 text-white rounded-lg transition-colors"
           >
             Retry
           </button>
@@ -175,23 +167,21 @@ export default function AdminDashboard() {
 
   if (!stats) return <DashboardLoader />;
 
-  /* ================= Render ================= */
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
 
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-sm text-gray-500 mt-1">
               Welcome back, {user?.firstName}
             </p>
           </div>
           <button
             onClick={fetchDashboardData}
-            className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg text-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:border-maroon-300 transition-all"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -200,34 +190,43 @@ export default function AdminDashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Users" value={stats.totalUsers} icon={Users} />
-          <StatCard title="Total Jobs" value={stats.totalJobs} icon={Briefcase} />
-          <StatCard
-            title="Pending Approvals"
-            value={stats.pendingDrivers + stats.pendingJobs}
-            icon={Clock}
-          />
-          <StatCard
-            title="Revenue"
-            value={`KES ${(stats.totalRevenue / 1000).toFixed(0)}k`}
-            icon={DollarSign}
-          />
+          <StatCard title="Total Users" value={stats.totalUsers} icon={Users} color="maroon" />
+          <StatCard title="Total Jobs" value={stats.totalJobs} icon={Briefcase} color="teal" />
+          <StatCard title="Pending Approvals" value={stats.pendingDrivers + stats.pendingJobs} icon={Clock} color="yellow" />
+          <StatCard title="Revenue" value={`KES ${(stats.totalRevenue / 1000).toFixed(0)}k`} icon={DollarSign} color="green" />
+        </div>
+
+        {/* Additional Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <SmallStatCard title="Completion Rate" value={`${stats.completionRate}%`} icon={CheckCircle} color="green" />
+          <SmallStatCard title="Active Jobs" value={stats.activeJobs} icon={Activity} color="teal" />
+          <SmallStatCard title="Total Drivers" value={stats.totalDrivers} icon={Truck} color="maroon" />
+          <SmallStatCard title="Total Clients" value={stats.totalClients} icon={UserCheck} color="yellow" />
         </div>
 
         {/* Jobs & Users */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Recent Jobs */}
-          <Card title="Recent Jobs">
+          <Card title="Recent Jobs" icon={Briefcase} color="maroon">
             {jobs.length === 0 ? (
               <Empty text="No jobs found" />
             ) : (
               jobs.map(job => (
                 <Row key={job.id}>
-                  <span>{job.title || 'Transport Job'}</span>
-                  <span className="text-xs text-gray-500">
-                    <MapPin className="inline h-3 w-3 mr-1" />
-                    {job.pickUpLocation} → {job.dropOffLocation}
+                  <div className="flex flex-col">
+                    <span className="font-medium text-gray-900">{job.title || 'Transport Job'}</span>
+                    <span className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                      <MapPin className="h-3 w-3 text-teal-500" />
+                      {job.pickUpLocation} → {job.dropOffLocation}
+                    </span>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                    job.status === 'ACTIVE' ? 'bg-teal-100 text-teal-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {job.status}
                   </span>
                 </Row>
               ))
@@ -235,14 +234,28 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Recent Users */}
-          <Card title="Recent Users">
+          <Card title="Recent Users" icon={Users} color="teal">
             {users.length === 0 ? (
               <Empty text="No users found" />
             ) : (
               users.map(u => (
                 <Row key={u.id}>
-                  <span>{u.firstName} {u.lastName}</span>
-                  <span className="text-xs text-gray-500">{u.role}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-maroon-600 flex items-center justify-center text-white text-xs font-semibold">
+                      {u.firstName?.[0]}{u.lastName?.[0]}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{u.firstName} {u.lastName}</p>
+                      <p className="text-xs text-gray-500">{u.email}</p>
+                    </div>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    u.role === 'ADMIN' ? 'bg-maroon-100 text-maroon-700' :
+                    u.role === 'DRIVER' ? 'bg-teal-100 text-teal-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {u.role}
+                  </span>
                 </Row>
               ))
             )}
@@ -256,42 +269,118 @@ export default function AdminDashboard() {
 
 /* ================= Small Components ================= */
 
-function StatCard({ title, value, icon: Icon }: any) {
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: ColorVariant;
+}
+
+function StatCard({ title, value, icon: Icon, color }: StatCardProps) {
+  const bgColors: Record<ColorVariant, string> = {
+    maroon: 'bg-maroon-100',
+    teal: 'bg-teal-100',
+    green: 'bg-green-100',
+    yellow: 'bg-yellow-100',
+  };
+
+  const iconColors: Record<ColorVariant, string> = {
+    maroon: 'text-maroon-600',
+    teal: 'text-teal-600',
+    green: 'text-green-600',
+    yellow: 'text-yellow-600',
+  };
+
   return (
-    <div className="bg-white rounded-xl p-4 border shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-gray-100">
-          <Icon className="h-5 w-5" />
+    <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
+      <div className="flex items-center justify-between">
+        <div className={`p-3 rounded-xl ${bgColors[color]}`}>
+          <Icon className={`h-5 w-5 ${iconColors[color]}`} />
         </div>
-        <div>
-          <p className="text-xs text-gray-400">{title}</p>
-          <p className="text-xl font-bold">{value}</p>
-        </div>
+      </div>
+      <div className="mt-4">
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-xs text-gray-500 mt-1">{title}</p>
       </div>
     </div>
   );
 }
 
-function Card({ title, children }: any) {
+interface SmallStatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: ColorVariant;
+}
+
+function SmallStatCard({ title, value, icon: Icon, color }: SmallStatCardProps) {
+  const bgColors: Record<ColorVariant, string> = {
+    maroon: 'bg-maroon-50 text-maroon-600',
+    teal: 'bg-teal-50 text-teal-600',
+    green: 'bg-green-50 text-green-600',
+    yellow: 'bg-yellow-50 text-yellow-600',
+  };
+
   return (
-    <div className="bg-white rounded-xl border shadow-sm">
-      <div className="px-4 py-3 border-b font-semibold text-sm">{title}</div>
-      <div className="divide-y">{children}</div>
+    <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-xs text-gray-500 mt-1">{title}</p>
+      </div>
+      <div className={`p-2 rounded-lg ${bgColors[color]}`}>
+        <Icon className="h-4 w-4" />
+      </div>
     </div>
   );
 }
 
-function Row({ children }: any) {
+interface CardProps {
+  title: string;
+  children: React.ReactNode;
+  icon?: React.ElementType;
+  color: ColorVariant;
+}
+
+function Card({ title, children, icon: Icon, color }: CardProps) {
+  const borderColors: Record<ColorVariant, string> = {
+    maroon: 'border-maroon-500',
+    teal: 'border-teal-500',
+    green: 'border-green-500',
+    yellow: 'border-yellow-500',
+  };
+
+  const textColors: Record<ColorVariant, string> = {
+    maroon: 'text-maroon-600',
+    teal: 'text-teal-600',
+    green: 'text-green-600',
+    yellow: 'text-yellow-600',
+  };
+
   return (
-    <div className="px-4 py-3 flex justify-between text-sm">
+    <div className={`bg-white rounded-xl border-l-4 ${borderColors[color]} border border-gray-200 shadow-sm hover:shadow-md transition-all`}>
+      <div className="px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className={`h-4 w-4 ${textColors[color]}`} />}
+          <h3 className="font-semibold text-gray-900">{title}</h3>
+        </div>
+      </div>
+      <div className="divide-y divide-gray-100">{children}</div>
+    </div>
+  );
+}
+
+function Row({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-5 py-4 flex justify-between items-center text-sm hover:bg-gray-50 transition-colors">
       {children}
     </div>
   );
 }
 
-function Empty({ text }: any) {
+function Empty({ text }: { text: string }) {
   return (
-    <div className="px-4 py-6 text-sm text-gray-500 text-center">
+    <div className="px-5 py-8 text-sm text-gray-500 text-center">
+      <AlertCircle className="h-8 w-8 text-gray-300 mx-auto mb-2" />
       {text}
     </div>
   );

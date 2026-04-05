@@ -15,12 +15,12 @@ export function LogoutLoader() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#8a1e31] to-[#55121e]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-maroon-600 to-maroon-800">
       <div className="flex flex-col items-center gap-6 select-none">
         {/* Animated Icon */}
         <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-white/20 animate-ping"></div>
-          <div className="relative bg-white/10 rounded-full p-6 backdrop-blur-sm">
+          <div className="absolute inset-0 rounded-full bg-white/30 animate-ping"></div>
+          <div className="relative bg-white/15 rounded-full p-6 backdrop-blur-sm">
             <LogOut className="h-12 w-12 text-white animate-pulse" />
           </div>
         </div>
@@ -30,20 +30,20 @@ export function LogoutLoader() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white">
             Goodbye!
           </h2>
-          <p className="text-white/80 text-base sm:text-lg">
+          <p className="text-white/90 text-base sm:text-lg">
             You are being logged out securely...
           </p>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-48 sm:w-64 h-1 bg-white/20 rounded-full overflow-hidden">
+        <div className="w-48 sm:w-64 h-1.5 bg-white/20 rounded-full overflow-hidden">
           <div 
-            className="h-full bg-white rounded-full transition-all duration-75"
+            className="h-full bg-gradient-to-r from-yellow-400 to-white rounded-full transition-all duration-75"
             style={{ width: `${progress}%` }}
-          ></div>
+          />
         </div>
 
-        <p className="text-white/40 text-xs mt-4">
+        <p className="text-white/50 text-xs mt-4">
           Thank you for using Tani Africa
         </p>
       </div>

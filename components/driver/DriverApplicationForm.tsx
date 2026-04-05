@@ -89,13 +89,13 @@ export function DriverApplicationForm({ onSuccess }: DriverApplicationFormProps)
   };
 
   return (
-    <Card className="border border-gray-200">
+    <Card variant="maroon" className="border border-gray-200 shadow-md">
       <CardBody className="p-6 sm:p-8">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-red-100">
-            <Truck className="h-7 w-7 text-red-600" />
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-maroon-100 to-maroon-200 shadow-sm">
+            <Truck className="h-8 w-8 text-maroon-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-maroon-700 to-teal-700 bg-clip-text text-transparent">
             Driver Application
           </h2>
           <p className="mt-1 text-sm text-gray-600">
@@ -107,14 +107,14 @@ export function DriverApplicationForm({ onSuccess }: DriverApplicationFormProps)
           {/* License */}
           <div>
             <label className="text-sm font-medium text-gray-700">
-              License Number *
+              License Number <span className="text-maroon-500">*</span>
             </label>
             <input
               name="licenseNumber"
               required
               value={formData.licenseNumber}
               onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-maroon-500 focus:ring-2 focus:ring-maroon-200 transition-colors"
               placeholder="DL-XXXXXX"
             />
           </div>
@@ -128,7 +128,7 @@ export function DriverApplicationForm({ onSuccess }: DriverApplicationFormProps)
               name="vehicleType"
               value={formData.vehicleType}
               onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-colors"
             >
               <option value="">Select vehicle</option>
               {vehicleTypes.map(v => (
@@ -151,20 +151,16 @@ export function DriverApplicationForm({ onSuccess }: DriverApplicationFormProps)
               name="experienceYears"
               value={formData.experienceYears}
               onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-colors"
             />
           </div>
 
           {/* Documents */}
           {[
-            { key: 'licenseDoc', label: 'License Document', icon: FileText },
-            { key: 'insuranceDoc', label: 'Insurance Document', icon: CreditCard },
-            {
-              key: 'registrationDoc',
-              label: 'Vehicle Registration',
-              icon: Upload,
-            },
-          ].map(({ key, label, icon: Icon }) => (
+            { key: 'licenseDoc', label: 'License Document', icon: FileText, color: 'maroon' },
+            { key: 'insuranceDoc', label: 'Insurance Document', icon: CreditCard, color: 'teal' },
+            { key: 'registrationDoc', label: 'Vehicle Registration', icon: Upload, color: 'green' },
+          ].map(({ key, label, icon: Icon, color }) => (
             <div key={key}>
               <label className="text-sm font-medium text-gray-700">
                 {label}
@@ -176,17 +172,17 @@ export function DriverApplicationForm({ onSuccess }: DriverApplicationFormProps)
                   value={(formData as any)[key]}
                   onChange={handleChange}
                   placeholder="https://..."
-                  className={`w-full rounded-lg border px-4 py-2 pl-10 focus:ring-2 ${
+                  className={`w-full rounded-lg border px-4 py-2.5 pl-10 focus:ring-2 transition-colors ${
                     (formData as any)[key] &&
                     isValidUrl((formData as any)[key])
-                      ? 'border-green-400 focus:ring-green-200'
-                      : 'border-gray-300 focus:ring-red-200'
+                      ? `border-${color === 'maroon' ? 'maroon' : color === 'teal' ? 'teal' : 'green'}-400 focus:ring-${color === 'maroon' ? 'maroon' : color === 'teal' ? 'teal' : 'green'}-200`
+                      : 'border-gray-300 focus:border-maroon-500 focus:ring-maroon-200'
                   }`}
                 />
-                <Icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Icon className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-${color === 'maroon' ? 'maroon' : color === 'teal' ? 'teal' : 'green'}-400`} />
                 {(formData as any)[key] &&
                   isValidUrl((formData as any)[key]) && (
-                    <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-600" />
+                    <CheckCircle className={`absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-${color === 'maroon' ? 'maroon' : color === 'teal' ? 'teal' : 'green'}-600`} />
                   )}
               </div>
             </div>
@@ -195,7 +191,7 @@ export function DriverApplicationForm({ onSuccess }: DriverApplicationFormProps)
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-3 text-white hover:bg-red-700 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-maroon-600 to-teal-600 py-3 text-white font-semibold hover:from-maroon-700 hover:to-teal-700 transition-all duration-300 disabled:opacity-60 shadow-md"
           >
             {isSubmitting ? (
               <>
