@@ -51,7 +51,7 @@ export function useBids() {
   }, []);
 
   /* ---------------------------------------------------
-     Place bid
+     Place bid — ✅ includes driverId required by backend
   --------------------------------------------------- */
   const placeBid = useCallback(
     async (payload: {
@@ -60,11 +60,17 @@ export function useBids() {
       estimatedDuration?: number;
       message?: string;
     }) => {
-      const res = await apiClient.post('/bids', payload);
-      await fetchMyBids(); // keep list fresh
+      if (!user) throw new Error('Not authenticated');
+
+      const res = await apiClient.post('/bids', {
+        ...payload,
+        driverId: user.id, // ✅ required by CreateBidDto
+      });
+
+      await fetchMyBids();
       return res.data;
     },
-    [fetchMyBids]
+    [fetchMyBids, user] // ✅ user added to deps
   );
 
   /* ---------------------------------------------------

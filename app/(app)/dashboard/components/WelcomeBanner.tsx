@@ -6,6 +6,7 @@ interface WelcomeBannerProps {
   firstName?: string;
   role: 'ADMIN' | 'DRIVER' | 'CLIENT';
   subtitle: string;
+  actions?: React.ReactNode;
 }
 
 /* ================= ROLE STYLES ================= */

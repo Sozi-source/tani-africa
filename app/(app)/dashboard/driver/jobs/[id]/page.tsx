@@ -4,74 +4,57 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-import { useJobs } from '@/lib/hooks/useJobs';
-import { Job } from '@/types';
-
+import { useDriverJobs } from '@/lib/hooks/useDriverJobs';
+import { PlaceBidModal } from '@/components/bids/PlaceBidModal';
 import { DashboardLoader } from '@/app/(app)/dashboard/components/DashboardLoader';
 import { DashboardError } from '@/app/(app)/dashboard/components/DashboardError';
+import { Job } from '@/types';
 
 import {
   ArrowLeft,
   CheckCircle,
   MapPin,
   Navigation,
+  Package,
+  Clock,
+  Gavel,
 } from 'lucide-react';
-
-/* =====================================================
-   Types
-===================================================== */
 
 type TabType = 'details' | 'navigation';
 
-/* =====================================================
-   Page
-===================================================== */
-
-export default function DriverActiveJobPage() {
+export default function DriverJobDetailPage() {
   const params = useParams();
   const router = useRouter();
   const jobId = params.id as string;
 
-  const { getJobById, updateJobStatus } = useJobs();
+  const { availableJobs, assignedJobs, loading: jobsLoading, refetch } = useDriverJobs();
 
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [completing, setCompleting] = useState(false);
+  const [bidModalOpen, setBidModalOpen] = useState(false);
 
   /* =====================================================
-     Fetch Job
+     Find job from already-fetched data
   ===================================================== */
 
   useEffect(() => {
-    let cancelled = false;
+    if (jobsLoading) return;
 
-    const load = async () => {
-      try {
-        setLoading(true);
-        const data = await getJobById(jobId);
+    const allJobs = [...availableJobs, ...assignedJobs];
+    const found = allJobs.find(j => j.id === jobId);
 
-        if (!cancelled) {
-          if (!data) {
-            setError('Job not found');
-          } else {
-            setJob(data);
-          }
-        }
-      } catch {
-        if (!cancelled) setError('Failed to load job');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
+    if (found) {
+      setJob(found);
+      setError(null);
+    } else {
+      setError('Job not found or you do not have access to it.');
+    }
 
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [jobId, getJobById]);
+    setLoading(false);
+  }, [jobId, availableJobs, assignedJobs, jobsLoading]);
 
   /* =====================================================
      Actions
@@ -79,13 +62,15 @@ export default function DriverActiveJobPage() {
 
   const handleCompleteJob = async () => {
     if (!job) return;
-
     if (!confirm('Are you sure this delivery is complete?')) return;
 
     setCompleting(true);
     try {
-      await updateJobStatus(job.id, 'COMPLETED');
-      router.push('/dashboard/driver/jobs/history');
+      await import('@/lib/api/client').then(({ default: apiClient }) =>
+        apiClient.patch(`/jobs/${job.id}/status`, { status: 'COMPLETED' })
+      );
+      await refetch();
+      router.push('/dashboard/driver');
     } catch {
       alert('Failed to mark job as completed');
     } finally {
@@ -97,7 +82,7 @@ export default function DriverActiveJobPage() {
      States
   ===================================================== */
 
-  if (loading) return <DashboardLoader />;
+  if (loading || jobsLoading) return <DashboardLoader />;
 
   if (error || !job) {
     return (
@@ -108,9 +93,14 @@ export default function DriverActiveJobPage() {
     );
   }
 
+  const isAvailable = availableJobs.some(j => j.id === job.id);
+  const isAssigned  = assignedJobs.some(j => j.id === job.id);
+
   const mapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(
     job.pickUpLocation
   )}/${encodeURIComponent(job.dropOffLocation)}`;
+
+  const jobTitle = job.title || `${job.pickUpLocation} → ${job.dropOffLocation}`;
 
   /* =====================================================
      Render
@@ -129,25 +119,47 @@ export default function DriverActiveJobPage() {
             Back to Dashboard
           </Link>
 
-          <h1 className="mt-2 text-2xl font-bold text-gray-900">
-            Active Delivery
-          </h1>
-          <p className="text-sm text-gray-500">
-            Job #{job.id.slice(-8)}
-          </p>
+          <div className="mt-2 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isAvailable ? 'Available Job' : 'My Delivery'}
+              </h1>
+              <p className="text-sm text-gray-500">Job #{job.id.slice(-8)}</p>
+            </div>
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                job.status === 'ACTIVE'
+                  ? 'bg-green-100 text-green-700'
+                  : job.status === 'BIDDING'
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              {job.status}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Status Banner */}
-        <div className="bg-orange-50 border-l-4 border-orange-600 p-4 rounded-lg mb-6">
-          <p className="font-semibold text-orange-800">
-            Delivery in Progress
-          </p>
-          <p className="text-sm text-orange-700">
-            Complete this job after successful delivery
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Status Banners */}
+        {isAssigned && job.status === 'ACTIVE' && (
+          <div className="bg-orange-50 border-l-4 border-orange-600 p-4 rounded-lg">
+            <p className="font-semibold text-orange-800">Delivery in Progress</p>
+            <p className="text-sm text-orange-700">
+              Complete this job after successful delivery
+            </p>
+          </div>
+        )}
+
+        {isAvailable && (
+          <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-lg">
+            <p className="font-semibold text-blue-800">Open for Bidding</p>
+            <p className="text-sm text-blue-700">
+              Place a competitive bid to win this job
+            </p>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm">
@@ -171,6 +183,7 @@ export default function DriverActiveJobPage() {
             {/* DETAILS TAB */}
             {activeTab === 'details' && (
               <div className="space-y-6">
+                {/* Locations */}
                 <div>
                   <h3 className="font-semibold mb-3">Shipment</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -178,7 +191,6 @@ export default function DriverActiveJobPage() {
                       <p className="text-xs text-gray-500">Pickup</p>
                       <p className="font-medium">{job.pickUpLocation}</p>
                     </div>
-
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-xs text-gray-500">Dropoff</p>
                       <p className="font-medium">{job.dropOffLocation}</p>
@@ -186,28 +198,67 @@ export default function DriverActiveJobPage() {
                   </div>
                 </div>
 
-                {job.description && (
-                  <div>
-                    <p className="text-xs text-gray-500">Description</p>
-                    <p>{job.description}</p>
+                {/* Cargo */}
+                {(job.cargoType || job.cargoWeight) && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+                    <Package className="h-4 w-4 text-gray-400" />
+                    <span>
+                      {job.cargoType}
+                      {job.cargoWeight ? ` • ${job.cargoWeight} kg` : ''}
+                    </span>
                   </div>
                 )}
 
+                {/* Description */}
+                {job.description && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Description</p>
+                    <p className="text-sm text-gray-700">{job.description}</p>
+                  </div>
+                )}
+
+                {/* Bids count */}
+                {job.bids && job.bids.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-4">
+                    <Clock className="h-4 w-4" />
+                    <span>
+                      {job.bids.length} bid{job.bids.length !== 1 ? 's' : ''} placed so far
+                    </span>
+                  </div>
+                )}
+
+                {/* Price */}
                 <div className="flex justify-between items-center bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-500">Earnings</p>
+                  <p className="text-sm text-gray-500">
+                    {isAvailable ? 'Budget' : 'Earnings'}
+                  </p>
                   <p className="text-xl font-bold text-green-700">
                     KES {(job.price ?? 0).toLocaleString()}
                   </p>
                 </div>
 
-                <button
-                  onClick={handleCompleteJob}
-                  disabled={completing}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <CheckCircle className="h-5 w-5" />
-                  {completing ? 'Completing…' : 'Mark as Completed'}
-                </button>
+                {/* Place Bid — available jobs in BIDDING status */}
+                {isAvailable && job.status === 'BIDDING' && (
+                  <button
+                    onClick={() => setBidModalOpen(true)}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Gavel className="h-5 w-5" />
+                    Place Bid
+                  </button>
+                )}
+
+                {/* Complete Job — assigned active jobs */}
+                {isAssigned && job.status === 'ACTIVE' && (
+                  <button
+                    onClick={handleCompleteJob}
+                    disabled={completing}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    {completing ? 'Completing…' : 'Mark as Completed'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -235,6 +286,18 @@ export default function DriverActiveJobPage() {
           </div>
         </div>
       </div>
+
+      {/* Place Bid Modal */}
+      <PlaceBidModal
+        isOpen={bidModalOpen}
+        onClose={() => setBidModalOpen(false)}
+        jobId={job.id}
+        jobTitle={jobTitle}
+        onSuccess={() => {
+          refetch();
+          router.push('/dashboard/driver');
+        }}
+      />
     </div>
   );
 }

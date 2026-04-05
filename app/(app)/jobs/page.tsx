@@ -2,9 +2,9 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
-import { useJobs } from '@/lib/hooks/useJobs';
+import { useDriverJobs } from '@/lib/hooks/useDriverJobs';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 import { Job } from '@/types';
@@ -13,40 +13,20 @@ import { JobCard } from '@/app/(app)/dashboard/components/JobCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 
-import {
-  Briefcase,
-  Grid3x3,
-  List,
-} from 'lucide-react';
+import { Briefcase, Grid3x3, List } from 'lucide-react';
 
 /* =====================================================
    Page
 ===================================================== */
 
 export default function JobsPage() {
-  const { jobs, loading, error, refetch } = useJobs();
+  const { availableJobs, loading, error, refetch } = useDriverJobs();
   const { isDriver } = useAuth();
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showAll, setShowAll] = useState(false);
 
-  /* =====================================================
-     Visible jobs (safe for sharing)
-  ===================================================== */
-
-  const visibleJobs = useMemo(() => {
-    // Public rule:
-    // Drivers should only see BIDDING jobs
-    // Clients/Admins can safely see their own via dashboard
-    if (isDriver) {
-      return jobs.filter(job => job.status === 'BIDDING');
-    }
-    return jobs;
-  }, [jobs, isDriver]);
-
-  const displayedJobs = showAll
-    ? visibleJobs
-    : visibleJobs.slice(0, 9);
+  const displayedJobs = showAll ? availableJobs : availableJobs.slice(0, 9);
 
   /* =====================================================
      States
@@ -63,9 +43,7 @@ export default function JobsPage() {
   if (error) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center">
-        <p className="text-red-700 font-medium">
-          Failed to load jobs
-        </p>
+        <p className="text-red-700 font-medium">Failed to load jobs</p>
         <Button onClick={refetch} className="bg-orange-600 hover:bg-orange-700">
           Try Again
         </Button>
@@ -83,9 +61,7 @@ export default function JobsPage() {
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Available Jobs
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Available Jobs</h1>
             <p className="text-sm text-gray-500 mt-1">
               Browse transport jobs open for bidding
             </p>
@@ -122,7 +98,7 @@ export default function JobsPage() {
 
       {/* ===== Jobs Grid/List ===== */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {visibleJobs.length === 0 ? (
+        {availableJobs.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center">
             <Briefcase className="mx-auto h-12 w-12 text-gray-300 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900">
@@ -151,7 +127,7 @@ export default function JobsPage() {
         )}
 
         {/* ===== Show More ===== */}
-        {visibleJobs.length > 9 && (
+        {availableJobs.length > 9 && (
           <div className="text-center mt-10">
             <button
               onClick={() => setShowAll(!showAll)}
