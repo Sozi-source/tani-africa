@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useJobs } from '@/lib/hooks/useJobs';
-import { useBids } from '@/lib/hooks/useBids';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -24,7 +23,26 @@ import {
   ArrowLeft,
   CheckCircle,
   XCircle,
+  RefreshCw,
 } from 'lucide-react';
+
+interface Bid {
+  id: string;
+  price: number;
+  estimatedDuration?: number;
+  message?: string;
+  status: string;
+  createdAt: string;
+  driverId: string;
+  driver?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    rating?: number;
+  };
+}
 
 export default function ClientJobDetailPage() {
   const params = useParams();
@@ -33,21 +51,19 @@ export default function ClientJobDetailPage() {
   const jobId = params.id as string;
   
   const { getJobById, updateJobStatus, loading: jobsLoading } = useJobs();
-  const { bids, loading: bidsLoading, refetch: refetchBids, updateBidStatus } = useBids();
   
   const [job, setJob] = useState<any>(null);
+  const [bids, setBids] = useState<Bid[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bidsLoading, setBidsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [acceptingBid, setAcceptingBid] = useState<string | null>(null);
   const [rejectingBid, setRejectingBid] = useState<string | null>(null);
 
-  // Filter bids for this specific job
-  const jobBids = bids.filter(bid => bid.jobId === jobId);
-
   useEffect(() => {
     if (jobId) {
       loadJob();
-      refetchBids();
+      fetchBidsForJob();
     }
   }, [jobId]);
 
@@ -68,14 +84,46 @@ export default function ClientJobDetailPage() {
     }
   };
 
+  // ✅ Use the correct endpoint to fetch bids for this job
+  const fetchBidsForJob = async () => {
+    setBidsLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`http://localhost:3001/api/v1/bids/job/${jobId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      const bidsArray = Array.isArray(data) ? data : data.data || [];
+      setBids(bidsArray);
+    } catch (err: any) {
+      console.error('Failed to fetch bids:', err);
+    } finally {
+      setBidsLoading(false);
+    }
+  };
+
   const handleAcceptBid = async (bidId: string) => {
     setAcceptingBid(bidId);
     try {
-      await updateBidStatus(bidId, 'ACCEPTED');
-      await updateJobStatus(jobId, 'ACTIVE');
-      toast.success('Bid accepted! Job is now active.');
+      const token = localStorage.getItem('accessToken');
+      
+      // Accept the bid using query parameter
+      const acceptRes = await fetch(`http://localhost:3001/api/v1/bids/${bidId}/status?status=ACCEPTED`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!acceptRes.ok) {
+        const error = await acceptRes.json();
+        throw new Error(error.message || 'Failed to accept bid');
+      }
+      
+      toast.success('Bid accepted! Driver has been assigned.');
       await loadJob();
-      await refetchBids();
+      await fetchBidsForJob();
     } catch (err: any) {
       toast.error(err?.message || 'Failed to accept bid');
     } finally {
@@ -86,9 +134,23 @@ export default function ClientJobDetailPage() {
   const handleRejectBid = async (bidId: string) => {
     setRejectingBid(bidId);
     try {
-      await updateBidStatus(bidId, 'REJECTED');
+      const token = localStorage.getItem('accessToken');
+      
+      const rejectRes = await fetch(`http://localhost:3001/api/v1/bids/${bidId}/status?status=REJECTED`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!rejectRes.ok) {
+        const error = await rejectRes.json();
+        throw new Error(error.message || 'Failed to reject bid');
+      }
+      
       toast.success('Bid rejected');
-      await refetchBids();
+      await fetchBidsForJob();
     } catch (err: any) {
       toast.error(err?.message || 'Failed to reject bid');
     } finally {
@@ -137,6 +199,11 @@ export default function ClientJobDetailPage() {
     CANCELLED: 'bg-red-100 text-red-800',
   };
 
+  // Count bids by status
+  const pendingBids = bids.filter(b => b.status === 'SUBMITTED');
+  const acceptedBids = bids.filter(b => b.status === 'ACCEPTED');
+  const rejectedBids = bids.filter(b => b.status === 'REJECTED');
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -171,6 +238,13 @@ export default function ClientJobDetailPage() {
               Track Delivery
             </Button>
           )}
+          <button
+            onClick={fetchBidsForJob}
+            className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50"
+            disabled={bidsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 text-gray-500 ${bidsLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -184,6 +258,11 @@ export default function ClientJobDetailPage() {
                 job.status === 'ACTIVE' ? 'bg-green-600 animate-pulse' : 'bg-current'
               }`} />
               <span className="font-semibold">Status: {job.status}</span>
+              {bids.length > 0 && (
+                <span className="ml-2 text-xs bg-white/50 px-2 py-0.5 rounded-full">
+                  {bids.length} bid{bids.length !== 1 ? 's' : ''} received
+                </span>
+              )}
             </div>
           </div>
 
@@ -290,15 +369,20 @@ export default function ClientJobDetailPage() {
             <CardHeader>
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-yellow-600" />
-                Bids ({jobBids.length})
+                Bids ({bids.length})
               </h2>
+              {pendingBids.length > 0 && (
+                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                  {pendingBids.length} pending
+                </span>
+              )}
             </CardHeader>
             <CardBody>
               {bidsLoading ? (
                 <div className="flex justify-center py-8">
                   <LoadingSpinner />
                 </div>
-              ) : jobBids.length === 0 ? (
+              ) : bids.length === 0 ? (
                 <div className="text-center py-8">
                   <Package className="h-10 w-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500">No bids yet</p>
@@ -306,7 +390,7 @@ export default function ClientJobDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {jobBids
+                  {bids
                     .sort((a, b) => a.price - b.price)
                     .map((bid) => (
                       <div

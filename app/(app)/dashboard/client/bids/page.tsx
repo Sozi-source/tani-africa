@@ -1,21 +1,16 @@
+// app/(app)/dashboard/client/bids/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useJobs } from '@/lib/hooks/useJobs';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils/formatters';
 import { 
-  Clock, 
-  User, 
-  MessageSquare, 
-  CheckCircle, 
-  XCircle,
-  Truck,
-  MapPin,
-  Package
+  Clock, User, MessageSquare, CheckCircle, XCircle,
+  Truck, MapPin, Package, RefreshCw, DollarSign,
+  TrendingUp, Award, Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -27,14 +22,14 @@ interface Bid {
   message?: string;
   status: string;
   createdAt: string;
-  jobId: string;
-  driver?: {
+  driverId: string;
+  driver: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
-    phone?: string;
     rating?: number;
+    photo?: string;
   };
 }
 
@@ -44,111 +39,88 @@ interface Job {
   pickUpLocation: string;
   dropOffLocation: string;
   status: string;
-}
-
-interface BidWithJob extends Bid {
-  job: Job;
+  price?: number;
+  bids?: Bid[];
 }
 
 const getStatusBadge = (status: string) => {
   const config: Record<string, { label: string; className: string }> = {
-    SUBMITTED: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700' },
-    ACCEPTED: { label: 'Accepted', className: 'bg-green-100 text-green-700' },
-    REJECTED: { label: 'Rejected', className: 'bg-red-100 text-red-700' },
-    EXPIRED: { label: 'Expired', className: 'bg-gray-100 text-gray-700' },
+    SUBMITTED: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700 border-l-4 border-l-yellow-500' },
+    ACCEPTED: { label: 'Accepted', className: 'bg-green-100 text-green-700 border-l-4 border-l-green-500' },
+    REJECTED: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-l-4 border-l-red-500' },
+    EXPIRED: { label: 'Expired', className: 'bg-gray-100 text-gray-700 border-l-4 border-l-gray-500' },
   };
   const cfg = config[status] || config.SUBMITTED;
-  return <span className={`text-xs px-2 py-1 rounded-full ${cfg.className}`}>{cfg.label}</span>;
+  return <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${cfg.className}`}>{cfg.label}</span>;
 };
 
 export default function ClientBidsPage() {
   const { user } = useAuth();
-  const { jobs, fetchJobs, loading: jobsLoading } = useJobs();
-  
-  const [bids, setBids] = useState<Bid[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
 
   useEffect(() => {
-    loadData();
+    fetchJobsWithBids();
   }, []);
 
-  const loadData = async () => {
+  const fetchJobsWithBids = async () => {
     setLoading(true);
     try {
-      await fetchJobs();
-      await fetchBids();
+      const token = localStorage.getItem('accessToken');
+      
+      // Get client's jobs
+      const jobsRes = await fetch('http://localhost:3001/api/v1/jobs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const jobsData = await jobsRes.json();
+      const jobsArray = Array.isArray(jobsData) ? jobsData : jobsData.data || [];
+      
+      // Fetch bids for each job using the correct endpoint
+      const jobsWithBids = await Promise.all(
+        jobsArray.map(async (job: Job) => {
+          const bidsRes = await fetch(`http://localhost:3001/api/v1/bids/job/${job.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const bids = await bidsRes.json();
+          const bidsArray = Array.isArray(bids) ? bids : bids.data || [];
+          return { ...job, bids: bidsArray };
+        })
+      );
+      
+      setJobs(jobsWithBids);
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('Failed to fetch jobs with bids:', error);
       toast.error('Failed to load bids');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchBids = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:3001/api/v1/bids', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      const bidsArray = Array.isArray(data) ? data : data.data || [];
-      setBids(bidsArray);
-    } catch (error) {
-      console.error('Failed to fetch bids:', error);
-    }
-  };
-
-  const updateBidStatus = async (bidId: string, status: string) => {
-    const token = localStorage.getItem('accessToken');
-    const response = await fetch(`http://localhost:3001/api/v1/bids/${bidId}/status`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ status })
-    });
-    return response.json();
-  };
-
-  const updateJobStatus = async (jobId: string, status: string) => {
-    const token = localStorage.getItem('accessToken');
-    const response = await fetch(`http://localhost:3001/api/v1/jobs/${jobId}/status`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ status })
-    });
-    return response.json();
-  };
-
-  // Filter bids for client's jobs
-  const clientJobIds = jobs.map(j => j.id);
-  const clientBids: BidWithJob[] = bids
-    .filter(bid => clientJobIds.includes(bid.jobId))
-    .map(bid => {
-      const job = jobs.find(j => j.id === bid.jobId);
-      return {
-        ...bid,
-        job: job as Job
-      };
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
   const handleAcceptBid = async (bidId: string, jobId: string) => {
     setProcessingId(bidId);
     try {
-      await updateBidStatus(bidId, 'ACCEPTED');
-      await updateJobStatus(jobId, 'ACTIVE');
+      const token = localStorage.getItem('accessToken');
+      
+      const acceptRes = await fetch(`http://localhost:3001/api/v1/bids/${bidId}/status?status=ACCEPTED`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!acceptRes.ok) {
+        const error = await acceptRes.json();
+        throw new Error(error.message || 'Failed to accept bid');
+      }
+      
       toast.success('Bid accepted! Driver has been assigned.');
-      await loadData();
-    } catch (error) {
+      await fetchJobsWithBids();
+    } catch (error: any) {
       console.error('Failed to accept bid:', error);
-      toast.error('Failed to accept bid');
+      toast.error(error.message || 'Failed to accept bid');
     } finally {
       setProcessingId(null);
     }
@@ -157,18 +129,54 @@ export default function ClientBidsPage() {
   const handleRejectBid = async (bidId: string) => {
     setProcessingId(bidId);
     try {
-      await updateBidStatus(bidId, 'REJECTED');
+      const token = localStorage.getItem('accessToken');
+      
+      const rejectRes = await fetch(`http://localhost:3001/api/v1/bids/${bidId}/status?status=REJECTED`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!rejectRes.ok) {
+        const error = await rejectRes.json();
+        throw new Error(error.message || 'Failed to reject bid');
+      }
+      
       toast.success('Bid rejected');
-      await loadData();
-    } catch (error) {
+      await fetchJobsWithBids();
+    } catch (error: any) {
       console.error('Failed to reject bid:', error);
-      toast.error('Failed to reject bid');
+      toast.error(error.message || 'Failed to reject bid');
     } finally {
       setProcessingId(null);
     }
   };
 
-  if (jobsLoading || loading) {
+  // Collect all bids from all jobs
+  const allBids = jobs.flatMap(job => 
+    (job.bids || []).map(bid => ({ ...bid, job }))
+  );
+  
+  const pendingBids = allBids.filter(b => b.status === 'SUBMITTED' && b.job.status === 'BIDDING');
+  const acceptedBids = allBids.filter(b => b.status === 'ACCEPTED');
+  const rejectedBids = allBids.filter(b => b.status === 'REJECTED');
+  
+  const getFilteredBids = () => {
+    switch (selectedTab) {
+      case 'pending': return pendingBids;
+      case 'accepted': return acceptedBids;
+      case 'rejected': return rejectedBids;
+      default: return allBids;
+    }
+  };
+
+  const totalBids = allBids.length;
+  const totalSpent = acceptedBids.reduce((sum, bid) => sum + bid.price, 0);
+  const averageBid = totalBids > 0 ? totalBids / pendingBids.length : 0;
+
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <LoadingSpinner size="lg" />
@@ -176,108 +184,161 @@ export default function ClientBidsPage() {
     );
   }
 
-  const pendingBids = clientBids.filter(b => b.status === 'SUBMITTED' && b.job?.status === 'BIDDING');
-  const acceptedBids = clientBids.filter(b => b.status === 'ACCEPTED');
-  const rejectedBids = clientBids.filter(b => b.status === 'REJECTED');
-
   return (
     <div className="min-h-screen bg-gray-50 py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Bids on My Jobs</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Bids Received</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Review and manage bids from drivers
+            Review and manage bids from drivers on your shipments
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 border-l-4 border-yellow-500 shadow-sm">
-            <p className="text-xs text-gray-500">Pending</p>
-            <p className="text-2xl font-bold text-yellow-600">{pendingBids.length}</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-4 border-l-4 border-maroon-500 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Total Bids</p>
+                <p className="text-2xl font-bold text-maroon-600">{totalBids}</p>
+              </div>
+              <div className="p-2 bg-maroon-100 rounded-lg">
+                <Package className="h-5 w-5 text-maroon-600" />
+              </div>
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm">
-            <p className="text-xs text-gray-500">Accepted</p>
-            <p className="text-2xl font-bold text-green-600">{acceptedBids.length}</p>
+          
+          <div className="bg-white rounded-xl p-4 border-l-4 border-yellow-500 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Pending Review</p>
+                <p className="text-2xl font-bold text-yellow-600">{pendingBids.length}</p>
+              </div>
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm">
-            <p className="text-xs text-gray-500">Rejected</p>
-            <p className="text-2xl font-bold text-red-600">{rejectedBids.length}</p>
+          
+          <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Accepted</p>
+                <p className="text-2xl font-bold text-green-600">{acceptedBids.length}</p>
+              </div>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 border-l-4 border-teal-500 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Total Spent</p>
+                <p className="text-2xl font-bold text-teal-600">{formatCurrency(totalSpent)}</p>
+              </div>
+              <div className="p-2 bg-teal-100 rounded-lg">
+                <DollarSign className="h-5 w-5 text-teal-600" />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Pending Bids */}
-        {pendingBids.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Pending Review</h2>
-            <div className="space-y-4">
-              {pendingBids.map((bid) => (
-                <BidCard
-                  key={bid.id}
-                  bid={bid}
-                  isPending={true}
-                  onAccept={() => handleAcceptBid(bid.id, bid.job.id)}
-                  onReject={() => handleRejectBid(bid.id)}
-                  isProcessing={processingId === bid.id}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setSelectedTab('all')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              selectedTab === 'all'
+                ? 'text-maroon-600 border-b-2 border-maroon-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            All Bids ({allBids.length})
+          </button>
+          <button
+            onClick={() => setSelectedTab('pending')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              selectedTab === 'pending'
+                ? 'text-yellow-600 border-b-2 border-yellow-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Pending ({pendingBids.length})
+          </button>
+          <button
+            onClick={() => setSelectedTab('accepted')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              selectedTab === 'accepted'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Accepted ({acceptedBids.length})
+          </button>
+          <button
+            onClick={() => setSelectedTab('rejected')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              selectedTab === 'rejected'
+                ? 'text-red-600 border-b-2 border-red-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Rejected ({rejectedBids.length})
+          </button>
+        </div>
 
-        {/* Accepted Bids */}
-        {acceptedBids.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Accepted Bids</h2>
-            <div className="space-y-4">
-              {acceptedBids.map((bid) => (
-                <BidCard
-                  key={bid.id}
-                  bid={bid}
-                  isPending={false}
-                  onAccept={() => {}}
-                  onReject={() => {}}
-                  isProcessing={false}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Refresh Button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={fetchJobsWithBids}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+        </div>
 
-        {/* Rejected Bids */}
-        {rejectedBids.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Rejected Bids</h2>
-            <div className="space-y-4">
-              {rejectedBids.map((bid) => (
-                <BidCard
-                  key={bid.id}
-                  bid={bid}
-                  isPending={false}
-                  onAccept={() => {}}
-                  onReject={() => {}}
-                  isProcessing={false}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {clientBids.length === 0 && (
+        {/* Bids List */}
+        {getFilteredBids().length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
-            <Truck className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No bids yet</h3>
+            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Package className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No bids found</h3>
             <p className="text-sm text-gray-500">
-              When drivers bid on your jobs, they will appear here
+              {selectedTab === 'pending' 
+                ? "You don't have any pending bids to review"
+                : selectedTab === 'accepted'
+                ? "You haven't accepted any bids yet"
+                : selectedTab === 'rejected'
+                ? "You haven't rejected any bids"
+                : "When drivers bid on your jobs, they will appear here"}
             </p>
-            <Link href="/dashboard/client/jobs">
-              <Button className="mt-4 bg-maroon-600 hover:bg-maroon-700">
-                View My Jobs
-              </Button>
-            </Link>
+            {selectedTab !== 'all' && (
+              <button
+                onClick={() => setSelectedTab('all')}
+                className="mt-4 text-maroon-600 hover:text-maroon-700 text-sm font-medium"
+              >
+                View all bids
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {getFilteredBids().map((bid) => (
+              <BidCard
+                key={bid.id}
+                bid={bid}
+                isPending={bid.status === 'SUBMITTED' && bid.job.status === 'BIDDING'}
+                onAccept={() => handleAcceptBid(bid.id, bid.job.id)}
+                onReject={() => handleRejectBid(bid.id)}
+                isProcessing={processingId === bid.id}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -287,84 +348,121 @@ export default function ClientBidsPage() {
 
 // Bid Card Component
 function BidCard({ bid, isPending, onAccept, onReject, isProcessing }: any) {
+  const [expanded, setExpanded] = useState(false);
+  
   return (
-    <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+    <Card className="border border-gray-200 hover:shadow-md transition-all duration-200">
       <CardBody className="p-5">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           
-          {/* Left - Job Info */}
+          {/* Left - Driver & Job Info */}
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="h-4 w-4 text-gray-400" />
-              <h3 className="font-semibold text-gray-900">
-                {bid.job?.title || 'Transport Job'}
-              </h3>
-              {getStatusBadge(bid.status)}
-            </div>
-            
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-              <MapPin className="h-3 w-3" />
-              <span>{bid.job?.pickUpLocation} → {bid.job?.dropOffLocation}</span>
-            </div>
-            
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <User className="h-3 w-3 text-gray-400" />
-                <span>{bid.driver?.firstName} {bid.driver?.lastName || 'Driver'}</span>
+            <div className="flex items-center gap-3 mb-3">
+              {/* Driver Avatar */}
+              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-maroon-500 to-teal-500 flex items-center justify-center text-white font-semibold text-sm">
+                {bid.driver?.firstName?.[0]}{bid.driver?.lastName?.[0]}
               </div>
-              {bid.estimatedDuration && (
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold text-gray-900">
+                    {bid.driver?.firstName} {bid.driver?.lastName}
+                  </h3>
+                  {getStatusBadge(bid.status)}
+                </div>
+                {bid.driver?.rating && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-yellow-500 text-xs">★</span>
+                    <span className="text-xs text-gray-600">{bid.driver.rating.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Job Details */}
+            <div className="ml-13 mt-2">
+              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <Package className="h-3 w-3" />
+                <span className="font-medium text-gray-700">
+                  {bid.job?.title || 'Transport Job'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                <MapPin className="h-3 w-3" />
+                <span>{bid.job?.pickUpLocation} → {bid.job?.dropOffLocation}</span>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                {bid.estimatedDuration && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-gray-400" />
+                    <span>{bid.estimatedDuration} day(s)</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3 text-gray-400" />
-                  <span>{bid.estimatedDuration} day(s)</span>
+                  <span>{formatRelativeTime(bid.createdAt)}</span>
+                </div>
+              </div>
+              
+              {/* Message (expandable) */}
+              {bid.message && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="text-xs text-maroon-600 hover:text-maroon-700 font-medium"
+                  >
+                    {expanded ? 'Show less' : 'Show message'}
+                  </button>
+                  {expanded && (
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+                      <MessageSquare className="h-3 w-3 inline mr-1 text-gray-400" />
+                      "{bid.message}"
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            
-            {bid.message && (
-              <div className="mt-3 p-2 bg-gray-50 rounded-lg text-sm text-gray-600">
-                <MessageSquare className="h-3 w-3 inline mr-1 text-gray-400" />
-                "{bid.message}"
-              </div>
-            )}
           </div>
           
           {/* Right - Price & Actions */}
-          <div className="text-right">
+          <div className="text-right min-w-[140px]">
             <div className="text-2xl font-bold text-maroon-600">
               {formatCurrency(bid.price)}
             </div>
-            <div className="text-xs text-gray-400 mt-1">
-              {formatRelativeTime(bid.createdAt)}
-            </div>
             
             {isPending && (
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={onAccept}
-                  disabled={isProcessing}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-1"
-                >
-                  <CheckCircle className="h-3 w-3" />
-                  Accept
-                </button>
+              <div className="flex gap-2 mt-3 justify-end">
                 <button
                   onClick={onReject}
                   disabled={isProcessing}
-                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                  className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50 flex items-center gap-1"
                 >
                   <XCircle className="h-3 w-3" />
-                  Reject
+                  Decline
+                </button>
+                <button
+                  onClick={onAccept}
+                  disabled={isProcessing}
+                  className="px-3 py-1.5 bg-maroon-600 text-white rounded-lg text-sm font-medium hover:bg-maroon-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                >
+                  <CheckCircle className="h-3 w-3" />
+                  Accept
                 </button>
               </div>
             )}
             
             {bid.status === 'ACCEPTED' && (
               <Link href={`/dashboard/client/jobs/${bid.job?.id}/track`}>
-                <Button size="sm" className="mt-3 bg-teal-600 hover:bg-teal-700">
+                <Button size="sm" className="mt-3 bg-teal-600 hover:bg-teal-700 w-full">
                   <Truck className="h-3 w-3 mr-1" />
                   Track
                 </Button>
               </Link>
+            )}
+            
+            {bid.status === 'REJECTED' && (
+              <div className="mt-3 text-xs text-gray-400">
+                Rejected • {formatRelativeTime(bid.updatedAt || bid.createdAt)}
+              </div>
             )}
           </div>
         </div>
