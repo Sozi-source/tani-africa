@@ -7,10 +7,10 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils/formatters';
+import apiClient, { extractArray } from '@/lib/api/client';
 import { 
   Clock, User, MessageSquare, CheckCircle, XCircle,
-  Truck, MapPin, Package, RefreshCw, DollarSign,
-  TrendingUp, Award, Eye
+  Truck, MapPin, Package, RefreshCw, DollarSign
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -22,6 +22,7 @@ interface Bid {
   message?: string;
   status: string;
   createdAt: string;
+  updatedAt?: string;
   driverId: string;
   driver: {
     id: string;
@@ -68,24 +69,21 @@ export default function ClientBidsPage() {
   const fetchJobsWithBids = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      
-      // Get client's jobs
-      const jobsRes = await fetch('http://localhost:3001/api/v1/jobs', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const jobsData = await jobsRes.json();
-      const jobsArray = Array.isArray(jobsData) ? jobsData : jobsData.data || [];
+      // ✅ Use apiClient instead of direct fetch
+      const jobsResponse = await apiClient.get('/jobs');
+      const jobsArray = extractArray<Job>(jobsResponse);
       
       // Fetch bids for each job using the correct endpoint
       const jobsWithBids = await Promise.all(
         jobsArray.map(async (job: Job) => {
-          const bidsRes = await fetch(`http://localhost:3001/api/v1/bids/job/${job.id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const bids = await bidsRes.json();
-          const bidsArray = Array.isArray(bids) ? bids : bids.data || [];
-          return { ...job, bids: bidsArray };
+          try {
+            const bidsResponse = await apiClient.get(`/bids/job/${job.id}`);
+            const bidsArray = extractArray<Bid>(bidsResponse);
+            return { ...job, bids: bidsArray };
+          } catch (err) {
+            console.error(`Failed to fetch bids for job ${job.id}:`, err);
+            return { ...job, bids: [] };
+          }
         })
       );
       
@@ -101,26 +99,13 @@ export default function ClientBidsPage() {
   const handleAcceptBid = async (bidId: string, jobId: string) => {
     setProcessingId(bidId);
     try {
-      const token = localStorage.getItem('accessToken');
-      
-      const acceptRes = await fetch(`http://localhost:3001/api/v1/bids/${bidId}/status?status=ACCEPTED`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!acceptRes.ok) {
-        const error = await acceptRes.json();
-        throw new Error(error.message || 'Failed to accept bid');
-      }
-      
+      // ✅ Use apiClient with query parameter
+      await apiClient.patch(`/bids/${bidId}/status?status=ACCEPTED`);
       toast.success('Bid accepted! Driver has been assigned.');
       await fetchJobsWithBids();
     } catch (error: any) {
       console.error('Failed to accept bid:', error);
-      toast.error(error.message || 'Failed to accept bid');
+      toast.error(error?.response?.data?.message || 'Failed to accept bid');
     } finally {
       setProcessingId(null);
     }
@@ -129,26 +114,13 @@ export default function ClientBidsPage() {
   const handleRejectBid = async (bidId: string) => {
     setProcessingId(bidId);
     try {
-      const token = localStorage.getItem('accessToken');
-      
-      const rejectRes = await fetch(`http://localhost:3001/api/v1/bids/${bidId}/status?status=REJECTED`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!rejectRes.ok) {
-        const error = await rejectRes.json();
-        throw new Error(error.message || 'Failed to reject bid');
-      }
-      
+      // ✅ Use apiClient with query parameter
+      await apiClient.patch(`/bids/${bidId}/status?status=REJECTED`);
       toast.success('Bid rejected');
       await fetchJobsWithBids();
     } catch (error: any) {
       console.error('Failed to reject bid:', error);
-      toast.error(error.message || 'Failed to reject bid');
+      toast.error(error?.response?.data?.message || 'Failed to reject bid');
     } finally {
       setProcessingId(null);
     }
@@ -159,7 +131,7 @@ export default function ClientBidsPage() {
     (job.bids || []).map(bid => ({ ...bid, job }))
   );
   
-  const pendingBids = allBids.filter(b => b.status === 'SUBMITTED' && b.job.status === 'BIDDING');
+  const pendingBids = allBids.filter(b => b.status === 'SUBMITTED' && b.job?.status === 'BIDDING');
   const acceptedBids = allBids.filter(b => b.status === 'ACCEPTED');
   const rejectedBids = allBids.filter(b => b.status === 'REJECTED');
   
@@ -174,7 +146,6 @@ export default function ClientBidsPage() {
 
   const totalBids = allBids.length;
   const totalSpent = acceptedBids.reduce((sum, bid) => sum + bid.price, 0);
-  const averageBid = totalBids > 0 ? totalBids / pendingBids.length : 0;
 
   if (loading) {
     return (
@@ -333,7 +304,7 @@ export default function ClientBidsPage() {
               <BidCard
                 key={bid.id}
                 bid={bid}
-                isPending={bid.status === 'SUBMITTED' && bid.job.status === 'BIDDING'}
+                isPending={bid.status === 'SUBMITTED' && bid.job?.status === 'BIDDING'}
                 onAccept={() => handleAcceptBid(bid.id, bid.job.id)}
                 onReject={() => handleRejectBid(bid.id)}
                 isProcessing={processingId === bid.id}
