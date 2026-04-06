@@ -2,23 +2,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
+import maplibregl from 'maplibre-gl';
 import { io, Socket } from 'socket.io-client';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { 
-  Truck, 
-  MapPin, 
-  Navigation, 
-  Clock, 
-  Zap,
-  CheckCircle,
-  AlertCircle,
-  Maximize2,
-  Minimize2,
-  Star
-} from 'lucide-react';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { Truck, MapPin, Navigation, Clock, Zap, CheckCircle, AlertCircle, Maximize2, Minimize2, Star } from 'lucide-react';
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
+// No API key needed! Just use the OpenFreeMap style URL
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'; // Free, no token
 
 interface LocationUpdate {
   lat: number;
@@ -28,16 +18,8 @@ interface LocationUpdate {
 
 interface JobTrackingMapProps {
   jobId: string;
-  pickUpLocation?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  dropOffLocation?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
+  pickUpLocation?: { lat: number; lng: number; address: string };
+  dropOffLocation?: { lat: number; lng: number; address: string };
   driverName?: string;
   driverPhone?: string;
   driverRating?: number;
@@ -51,15 +33,14 @@ export function JobTrackingMap({
   driverName,
   driverPhone,
   driverRating,
-  estimatedArrival,
 }: JobTrackingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const routeRef = useRef<LocationUpdate[]>([]);
-  const pickupMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const dropoffMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const pickupMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const dropoffMarkerRef = useRef<maplibregl.Marker | null>(null);
 
   const [isConnected, setIsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
@@ -71,7 +52,7 @@ export function JobTrackingMap({
 
   // Calculate distance between two points (Haversine formula)
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -81,15 +62,13 @@ export function JobTrackingMap({
     return R * c;
   };
 
-  // Format distance
   const formatDistance = (km: number): string => {
     if (km < 1) return `${Math.round(km * 1000)}m`;
     return `${km.toFixed(1)}km`;
   };
 
-  // Estimate arrival time
   const estimateArrival = (distance: number): string => {
-    const avgSpeed = 40; // km/h average speed in city
+    const avgSpeed = 40;
     const minutes = (distance / avgSpeed) * 60;
     const arrivalTime = new Date(Date.now() + minutes * 60000);
     return arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -98,24 +77,24 @@ export function JobTrackingMap({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Default center (Nairobi)
     const center = currentLocation 
       ? [currentLocation.lng, currentLocation.lat]
       : pickUpLocation 
         ? [pickUpLocation.lng, pickUpLocation.lat]
         : [36.8219, -1.2921];
 
-    const map = new mapboxgl.Map({
+    // Initialize map with OpenFreeMap style - NO API KEY NEEDED!
+    const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: MAP_STYLE,  // Free, no token required
       center: center as [number, number],
       zoom: 12,
     });
 
     mapRef.current = map;
 
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    map.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(new maplibregl.ScaleControl(), 'bottom-left');
 
     map.on('load', () => {
       // Add route line source
@@ -128,7 +107,6 @@ export function JobTrackingMap({
         },
       });
 
-      // Route line layer
       map.addLayer({
         id: 'route-line',
         type: 'line',
@@ -142,7 +120,7 @@ export function JobTrackingMap({
         },
       });
 
-      // Add pickup marker if available
+      // Add pickup marker
       if (pickUpLocation) {
         const pickupEl = document.createElement('div');
         pickupEl.innerHTML = `
@@ -157,13 +135,12 @@ export function JobTrackingMap({
             </div>
           </div>
         `;
-        
-        pickupMarkerRef.current = new mapboxgl.Marker({ element: pickupEl, anchor: 'bottom' })
+        pickupMarkerRef.current = new maplibregl.Marker({ element: pickupEl, anchor: 'bottom' })
           .setLngLat([pickUpLocation.lng, pickUpLocation.lat])
           .addTo(map);
       }
 
-      // Add dropoff marker if available
+      // Add dropoff marker
       if (dropOffLocation) {
         const dropoffEl = document.createElement('div');
         dropoffEl.innerHTML = `
@@ -178,8 +155,7 @@ export function JobTrackingMap({
             </div>
           </div>
         `;
-        
-        dropoffMarkerRef.current = new mapboxgl.Marker({ element: dropoffEl, anchor: 'bottom' })
+        dropoffMarkerRef.current = new maplibregl.Marker({ element: dropoffEl, anchor: 'bottom' })
           .setLngLat([dropOffLocation.lng, dropOffLocation.lat])
           .addTo(map);
       }
@@ -200,13 +176,13 @@ export function JobTrackingMap({
       </div>
     `;
 
-    const marker = new mapboxgl.Marker({ element: driverEl, anchor: 'bottom' })
+    const marker = new maplibregl.Marker({ element: driverEl, anchor: 'bottom' })
       .setLngLat(center as [number, number])
       .addTo(map);
 
     markerRef.current = marker;
 
-    // Connect to WebSocket
+    // WebSocket connection (same as before)
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     const socket = io(apiUrl, {
       transports: ['websocket', 'polling'],
@@ -234,15 +210,11 @@ export function JobTrackingMap({
 
     socket.on('location', (data: LocationUpdate) => {
       const { lat, lng, timestamp } = data;
-
       if (!lat || !lng) return;
 
       setCurrentLocation({ lat, lng });
-      
-      // Update marker position
       marker.setLngLat([lng, lat]);
 
-      // Fly to new position smoothly
       map.flyTo({
         center: [lng, lat],
         zoom: Math.max(map.getZoom(), 13),
@@ -251,15 +223,11 @@ export function JobTrackingMap({
         essential: true,
       });
 
-      // Add to route history (limit to 200 points)
       routeRef.current.push({ lat, lng, timestamp });
-      if (routeRef.current.length > 200) {
-        routeRef.current.shift();
-      }
+      if (routeRef.current.length > 200) routeRef.current.shift();
 
-      // Update route line
       if (map.getSource('route')) {
-        const source = map.getSource('route') as mapboxgl.GeoJSONSource;
+        const source = map.getSource('route') as maplibregl.GeoJSONSource;
         if (source) {
           source.setData({
             type: 'Feature',
@@ -272,7 +240,6 @@ export function JobTrackingMap({
         }
       }
 
-      // Calculate distance to dropoff if available
       if (dropOffLocation) {
         const distance = calculateDistance(lat, lng, dropOffLocation.lat, dropOffLocation.lng);
         setDistanceToDestination(distance);
@@ -287,15 +254,12 @@ export function JobTrackingMap({
         socketRef.current.emit('unwatch-job', jobId);
         socketRef.current.disconnect();
       }
-      if (mapRef.current) {
-        mapRef.current.remove();
-      }
+      if (mapRef.current) mapRef.current.remove();
     };
-  }, [jobId, pickUpLocation, dropOffLocation, currentLocation]);
+  }, [jobId, pickUpLocation, dropOffLocation]);
 
   const toggleFullscreen = () => {
     if (!mapContainerRef.current) return;
-    
     if (!isFullscreen) {
       mapContainerRef.current.requestFullscreen();
     } else {
@@ -314,15 +278,10 @@ export function JobTrackingMap({
             {isConnected ? 'Live Tracking' : 'Reconnecting...'}
           </span>
           {lastUpdate && (
-            <span className="text-xs text-gray-500">
-              Last update: {lastUpdate}
-            </span>
+            <span className="text-xs text-gray-500">Last update: {lastUpdate}</span>
           )}
         </div>
-        <button
-          onClick={toggleFullscreen}
-          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-        >
+        <button onClick={toggleFullscreen} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
       </div>
@@ -345,9 +304,7 @@ export function JobTrackingMap({
                   <span className="text-gray-600">{driverRating}</span>
                 </div>
               )}
-              {driverPhone && (
-                <p className="text-xs text-gray-500">{driverPhone}</p>
-              )}
+              {driverPhone && <p className="text-xs text-gray-500">{driverPhone}</p>}
             </div>
           </div>
         </div>
@@ -356,38 +313,26 @@ export function JobTrackingMap({
       {/* Trip Info Card */}
       <div className="absolute bottom-4 left-4 right-4 z-10 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-4">
         <div className="grid grid-cols-2 gap-4">
-          {/* Pickup Info */}
           {pickUpLocation && (
             <div className="flex items-start gap-2">
-              <div className="mt-0.5">
-                <div className="w-2 h-2 bg-green-500 rounded-full" />
-              </div>
+              <div className="mt-0.5"><div className="w-2 h-2 bg-green-500 rounded-full" /></div>
               <div>
                 <p className="text-xs text-gray-500">Pickup</p>
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {pickUpLocation.address}
-                </p>
+                <p className="text-sm font-medium text-gray-900 truncate">{pickUpLocation.address}</p>
               </div>
             </div>
           )}
-
-          {/* Dropoff Info */}
           {dropOffLocation && (
             <div className="flex items-start gap-2">
-              <div className="mt-0.5">
-                <div className="w-2 h-2 bg-red-500 rounded-full" />
-              </div>
+              <div className="mt-0.5"><div className="w-2 h-2 bg-red-500 rounded-full" /></div>
               <div>
                 <p className="text-xs text-gray-500">Dropoff</p>
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {dropOffLocation.address}
-                </p>
+                <p className="text-sm font-medium text-gray-900 truncate">{dropOffLocation.address}</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Progress and ETA */}
         {distanceToDestination !== null && dropOffLocation && (
           <div className="mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center justify-between mb-2">
@@ -395,10 +340,7 @@ export function JobTrackingMap({
               <span className="text-sm font-semibold text-gray-900">{formatDistance(distanceToDestination)}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-orange-500 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(0, 100 - (distanceToDestination / 10) * 100)}%` }}
-              />
+              <div className="bg-orange-500 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.max(0, 100 - (distanceToDestination / 10) * 100)}%` }} />
             </div>
             <div className="flex items-center justify-between mt-2">
               <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -413,7 +355,6 @@ export function JobTrackingMap({
           </div>
         )}
 
-        {/* Stats */}
         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Navigation className="h-3 w-3" />
@@ -426,7 +367,6 @@ export function JobTrackingMap({
         </div>
       </div>
 
-      {/* Error Message */}
       {error && (
         <div className="absolute top-4 right-4 z-10 bg-red-50 border border-red-200 rounded-lg p-3 max-w-xs">
           <div className="flex items-center gap-2">

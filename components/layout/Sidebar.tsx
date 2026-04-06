@@ -51,7 +51,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'My Shipments', href: '/dashboard/client/jobs', icon: Package },
         { name: 'Post Shipment', href: '/dashboard/client/jobs/create', icon: PlusCircle },
-        {name: 'Become a Driver', href: '/dashboard/client/apply', icon: CgDrive }
+        { name: 'Become a Driver', href: '/dashboard/client/apply', icon: CgDrive },
+        { name: 'My Bids', href: '/dashboard/client/bids', icon: MessageCircle },
+        { name: 'My Profile', href: '/dashboard/client/profile', icon: User },
+
       ]
     : isDriver
     ? [

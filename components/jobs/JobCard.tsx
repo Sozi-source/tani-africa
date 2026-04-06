@@ -17,6 +17,7 @@ import {
   Eye,
   Truck,
   Package,
+  Navigation,
 } from 'lucide-react';
 
 import {
@@ -36,7 +37,7 @@ export const JobCard: React.FC<JobCardProps> = ({
 }) => {
   /* ================= AUTH ================= */
 
-  const { isAuthenticated, isAdmin, isDriver } = useAuth();
+  const { isAuthenticated, isAdmin, isDriver, isClient } = useAuth();
   const [showBidModal, setShowBidModal] = useState(false);
 
   /* ================= STATUS UI ================= */
@@ -51,6 +52,11 @@ export const JobCard: React.FC<JobCardProps> = ({
     isDriver &&
     job.status === 'BIDDING';
 
+  const canTrack =
+    isAuthenticated &&
+    (isClient || isAdmin) &&
+    job.status === 'ACTIVE';
+
   /* ================= ROUTING ================= */
 
   const detailsHref = isAdmin
@@ -58,6 +64,8 @@ export const JobCard: React.FC<JobCardProps> = ({
     : isDriver
     ? `/dashboard/driver/jobs/${job.id}`
     : `/dashboard/client/jobs/${job.id}`;
+
+  const trackHref = `/dashboard/client/jobs/${job.id}/track`;
 
   /* ================= RENDER ================= */
 
@@ -130,6 +138,19 @@ export const JobCard: React.FC<JobCardProps> = ({
                 <Truck className="h-4 w-4 mr-1" />
                 Place Bid
               </Button>
+            )}
+
+            {canTrack && (
+              <Link href={trackHref}>
+                <Button
+                  fullWidth
+                  variant="outline"
+                  className="border-teal-500 text-teal-600 hover:bg-teal-50"
+                >
+                  <Navigation className="h-4 w-4 mr-1" />
+                  Track Delivery
+                </Button>
+              </Link>
             )}
           </div>
         </CardBody>
