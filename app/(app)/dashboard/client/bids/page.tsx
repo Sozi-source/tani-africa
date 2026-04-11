@@ -3,14 +3,12 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Card, CardBody } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils/formatters';
 import apiClient, { extractArray } from '@/lib/api/client';
 import { 
-  Clock, User, MessageSquare, CheckCircle, XCircle,
-  Truck, MapPin, Package, RefreshCw, DollarSign
+  Clock, MessageSquare, CheckCircle, XCircle,
+  Truck, MapPin, Package, RefreshCw, DollarSign, Star, User
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -45,14 +43,18 @@ interface Job {
 }
 
 const getStatusBadge = (status: string) => {
-  const config: Record<string, { label: string; className: string }> = {
-    SUBMITTED: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700 border-l-4 border-l-yellow-500' },
-    ACCEPTED: { label: 'Accepted', className: 'bg-green-100 text-green-700 border-l-4 border-l-green-500' },
-    REJECTED: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-l-4 border-l-red-500' },
-    EXPIRED: { label: 'Expired', className: 'bg-gray-100 text-gray-700 border-l-4 border-l-gray-500' },
+  const config: Record<string, { label: string; bgColor: string; textColor: string }> = {
+    SUBMITTED: { label: 'Pending', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
+    ACCEPTED: { label: 'Accepted', bgColor: 'bg-green-100', textColor: 'text-green-700' },
+    REJECTED: { label: 'Rejected', bgColor: 'bg-red-100', textColor: 'text-red-700' },
+    EXPIRED: { label: 'Expired', bgColor: 'bg-gray-100', textColor: 'text-gray-700' },
   };
   const cfg = config[status] || config.SUBMITTED;
-  return <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${cfg.className}`}>{cfg.label}</span>;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.bgColor} ${cfg.textColor}`}>
+      {cfg.label}
+    </span>
+  );
 };
 
 export default function ClientBidsPage() {
@@ -69,11 +71,9 @@ export default function ClientBidsPage() {
   const fetchJobsWithBids = async () => {
     setLoading(true);
     try {
-      // ✅ Use apiClient instead of direct fetch
       const jobsResponse = await apiClient.get('/jobs');
       const jobsArray = extractArray<Job>(jobsResponse);
       
-      // Fetch bids for each job using the correct endpoint
       const jobsWithBids = await Promise.all(
         jobsArray.map(async (job: Job) => {
           try {
@@ -99,7 +99,6 @@ export default function ClientBidsPage() {
   const handleAcceptBid = async (bidId: string, jobId: string) => {
     setProcessingId(bidId);
     try {
-      // ✅ Use apiClient with query parameter
       await apiClient.patch(`/bids/${bidId}/status?status=ACCEPTED`);
       toast.success('Bid accepted! Driver has been assigned.');
       await fetchJobsWithBids();
@@ -114,19 +113,14 @@ export default function ClientBidsPage() {
   const handleRejectBid = async (bidId: string) => {
     setProcessingId(bidId);
     try {
-      // ✅ Use apiClient with query parameter
       await apiClient.patch(`/bids/${bidId}/status?status=REJECTED`);
       toast.success('Bid rejected');
       await fetchJobsWithBids();
-    } catch (error: any) {
-      console.error('Failed to reject bid:', error);
-      toast.error(error?.response?.data?.message || 'Failed to reject bid');
     } finally {
       setProcessingId(null);
     }
   };
 
-  // Collect all bids from all jobs
   const allBids = jobs.flatMap(job => 
     (job.bids || []).map(bid => ({ ...bid, job }))
   );
@@ -167,51 +161,55 @@ export default function ClientBidsPage() {
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 border-l-4 border-maroon-500 shadow-sm hover:shadow-md transition-shadow">
+        {/* Stats Cards - Responsive Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Total Bids Card */}
+          <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Total Bids</p>
-                <p className="text-2xl font-bold text-maroon-600">{totalBids}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalBids}</p>
               </div>
-              <div className="p-2 bg-maroon-100 rounded-lg">
+              <div className="p-2 bg-maroon-50 rounded-lg">
                 <Package className="h-5 w-5 text-maroon-600" />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-4 border-l-4 border-yellow-500 shadow-sm hover:shadow-md transition-shadow">
+          {/* Pending Card */}
+          <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Pending Review</p>
-                <p className="text-2xl font-bold text-yellow-600">{pendingBids.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{pendingBids.length}</p>
               </div>
-              <div className="p-2 bg-yellow-100 rounded-lg">
+              <div className="p-2 bg-yellow-50 rounded-lg">
                 <Clock className="h-5 w-5 text-yellow-600" />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
+          {/* Accepted Card */}
+          <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Accepted</p>
-                <p className="text-2xl font-bold text-green-600">{acceptedBids.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{acceptedBids.length}</p>
               </div>
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-2 bg-green-50 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-4 border-l-4 border-teal-500 shadow-sm hover:shadow-md transition-shadow">
+          {/* Total Spent Card */}
+          <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Total Spent</p>
-                <p className="text-2xl font-bold text-teal-600">{formatCurrency(totalSpent)}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalSpent)}</p>
               </div>
-              <div className="p-2 bg-teal-100 rounded-lg">
+              <div className="p-2 bg-teal-50 rounded-lg">
                 <DollarSign className="h-5 w-5 text-teal-600" />
               </div>
             </div>
@@ -219,7 +217,7 @@ export default function ClientBidsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200">
           <button
             onClick={() => setSelectedTab('all')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -273,7 +271,7 @@ export default function ClientBidsPage() {
           </button>
         </div>
 
-        {/* Bids List */}
+        {/* Bids Grid - Responsive Cards */}
         {getFilteredBids().length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
             <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -299,7 +297,7 @@ export default function ClientBidsPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {getFilteredBids().map((bid) => (
               <BidCard
                 key={bid.id}
@@ -317,127 +315,127 @@ export default function ClientBidsPage() {
   );
 }
 
-// Bid Card Component
+// Bid Card Component - Medium size, responsive
 function BidCard({ bid, isPending, onAccept, onReject, isProcessing }: any) {
   const [expanded, setExpanded] = useState(false);
   
   return (
-    <Card className="border border-gray-200 hover:shadow-md transition-all duration-200">
-      <CardBody className="p-5">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          
-          {/* Left - Driver & Job Info */}
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              {/* Driver Avatar */}
-              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-maroon-500 to-teal-500 flex items-center justify-center text-white font-semibold text-sm">
-                {bid.driver?.firstName?.[0]}{bid.driver?.lastName?.[0]}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-gray-900">
-                    {bid.driver?.firstName} {bid.driver?.lastName}
-                  </h3>
-                  {getStatusBadge(bid.status)}
-                </div>
-                {bid.driver?.rating && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-yellow-500 text-xs">★</span>
-                    <span className="text-xs text-gray-600">{bid.driver.rating.toFixed(1)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Job Details */}
-            <div className="ml-13 mt-2">
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <Package className="h-3 w-3" />
-                <span className="font-medium text-gray-700">
-                  {bid.job?.title || 'Transport Job'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                <MapPin className="h-3 w-3" />
-                <span>{bid.job?.pickUpLocation} → {bid.job?.dropOffLocation}</span>
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                {bid.estimatedDuration && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-gray-400" />
-                    <span>{bid.estimatedDuration} day(s)</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-gray-400" />
-                  <span>{formatRelativeTime(bid.createdAt)}</span>
-                </div>
-              </div>
-              
-              {/* Message (expandable) */}
-              {bid.message && (
-                <div className="mt-3">
-                  <button
-                    onClick={() => setExpanded(!expanded)}
-                    className="text-xs text-maroon-600 hover:text-maroon-700 font-medium"
-                  >
-                    {expanded ? 'Show less' : 'Show message'}
-                  </button>
-                  {expanded && (
-                    <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-                      <MessageSquare className="h-3 w-3 inline mr-1 text-gray-400" />
-                      "{bid.message}"
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+    <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col">
+      <div className="p-4 flex-1 flex flex-col">
+        
+        {/* Driver Avatar & Name */}
+        <div className="flex items-center gap-3 mb-3">
+          <div className="h-12 w-12 rounded-full bg-maroon-600 flex items-center justify-center text-white font-semibold text-base flex-shrink-0">
+            {bid.driver?.firstName?.[0]}{bid.driver?.lastName?.[0]}
           </div>
-          
-          {/* Right - Price & Actions */}
-          <div className="text-right min-w-[140px]">
-            <div className="text-2xl font-bold text-maroon-600">
-              {formatCurrency(bid.price)}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-gray-900 text-sm truncate">
+                {bid.driver?.firstName} {bid.driver?.lastName}
+              </h3>
+              {getStatusBadge(bid.status)}
             </div>
-            
-            {isPending && (
-              <div className="flex gap-2 mt-3 justify-end">
-                <button
-                  onClick={onReject}
-                  disabled={isProcessing}
-                  className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50 flex items-center gap-1"
-                >
-                  <XCircle className="h-3 w-3" />
-                  Decline
-                </button>
-                <button
-                  onClick={onAccept}
-                  disabled={isProcessing}
-                  className="px-3 py-1.5 bg-maroon-600 text-white rounded-lg text-sm font-medium hover:bg-maroon-700 transition-colors disabled:opacity-50 flex items-center gap-1"
-                >
-                  <CheckCircle className="h-3 w-3" />
-                  Accept
-                </button>
-              </div>
-            )}
-            
-            {bid.status === 'ACCEPTED' && (
-              <Link href={`/dashboard/client/jobs/${bid.job?.id}/track`}>
-                <Button size="sm" className="mt-3 bg-teal-600 hover:bg-teal-700 w-full">
-                  <Truck className="h-3 w-3 mr-1" />
-                  Track
-                </Button>
-              </Link>
-            )}
-            
-            {bid.status === 'REJECTED' && (
-              <div className="mt-3 text-xs text-gray-400">
-                Rejected • {formatRelativeTime(bid.updatedAt || bid.createdAt)}
+            {bid.driver?.rating && (
+              <div className="flex items-center gap-1 mt-1">
+                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                <span className="text-xs text-gray-600">{bid.driver.rating.toFixed(1)}</span>
               </div>
             )}
           </div>
         </div>
-      </CardBody>
-    </Card>
+        
+        {/* Price - Highlighted */}
+        <div className="mb-3 text-center py-2 border-y border-gray-100">
+          <p className="text-2xl font-bold text-maroon-600">
+            {formatCurrency(bid.price)}
+          </p>
+        </div>
+        
+        {/* Job Details */}
+        <div className="space-y-2 mb-3 flex-1">
+          <div className="flex items-start gap-2 text-sm">
+            <Package className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+            <span className="text-gray-700 text-xs line-clamp-1">
+              {bid.job?.title || 'Transport Job'}
+            </span>
+          </div>
+          <div className="flex items-start gap-2 text-sm">
+            <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+            <span className="text-gray-600 text-xs line-clamp-2">
+              {bid.job?.pickUpLocation} → {bid.job?.dropOffLocation}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            {bid.estimatedDuration && (
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>{bid.estimatedDuration}d</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{formatRelativeTime(bid.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Message Section */}
+        {bid.message && (
+          <div className="mb-3">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-maroon-600 hover:text-maroon-700 font-medium"
+            >
+              {expanded ? 'Show less' : 'Show message'}
+            </button>
+            {expanded && (
+              <div className="mt-2 p-2 bg-gray-50 rounded-lg text-xs text-gray-600">
+                <MessageSquare className="h-3 w-3 inline mr-1 text-gray-400" />
+                "{bid.message}"
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Action Buttons */}
+        <div className="mt-auto pt-3 border-t border-gray-100">
+          {isPending && (
+            <div className="flex gap-2">
+              <button
+                onClick={onReject}
+                disabled={isProcessing}
+                className="flex-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                Decline
+              </button>
+              <button
+                onClick={onAccept}
+                disabled={isProcessing}
+                className="flex-1 px-3 py-2 bg-maroon-600 text-white rounded-lg text-sm font-medium hover:bg-maroon-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                Accept
+              </button>
+            </div>
+          )}
+          
+          {bid.status === 'ACCEPTED' && (
+            <Link href={`/dashboard/client/jobs/${bid.job?.id}/track`} className="block">
+              <button className="w-full px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors flex items-center justify-center gap-1">
+                <Truck className="h-3.5 w-3.5" />
+                Track Shipment
+              </button>
+            </Link>
+          )}
+          
+          {bid.status === 'REJECTED' && (
+            <div className="text-center text-xs text-gray-400 py-2">
+              Rejected • {formatRelativeTime(bid.updatedAt || bid.createdAt)}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
