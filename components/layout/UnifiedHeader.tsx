@@ -10,15 +10,11 @@ import {
   User,
   LogOut,
   Settings,
-  LayoutDashboard,
   Briefcase,
   Truck,
   Shield,
-  Users,
   ChevronDown,
-  Package,
-  Gavel,
-  PlusCircle,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface UnifiedHeaderProps {
@@ -37,8 +33,6 @@ export default function UnifiedHeader({
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  /* ================= Dropdown Outside Click ================= */
-
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
@@ -47,8 +41,6 @@ export default function UnifiedHeader({
     if (open) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
-
-  /* ================= Page Title ================= */
 
   const getTitle = () => {
     if (pathname.startsWith('/dashboard/admin')) return 'Admin Dashboard';
@@ -64,22 +56,51 @@ export default function UnifiedHeader({
     return 'Tani Africa';
   };
 
-  /* ================= Breadcrumb ================= */
-
+  // Fixed breadcrumb with unique keys
   const getBreadcrumbs = () => {
     const segments = pathname.split('/').filter(Boolean);
-
-    const crumbs = segments.map((segment, index) => {
-      const href = '/' + segments.slice(0, index + 1).join('/');
-      return {
-        label: segment
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, l => l.toUpperCase()),
-        href,
-      };
-    });
-
-    return [{ label: 'Home', href: '/dashboard' }, ...crumbs];
+    
+    // Remove consecutive duplicates
+    const uniqueSegments: string[] = [];
+    for (let i = 0; i < segments.length; i++) {
+      if (i === 0 || segments[i] !== segments[i - 1]) {
+        uniqueSegments.push(segments[i]);
+      }
+    }
+    
+    const crumbs: { label: string; href: string; key: string }[] = [];
+    
+    // Add Home only if not already at dashboard
+    if (uniqueSegments[0] !== 'dashboard') {
+      crumbs.push({
+        label: 'Home',
+        href: '/dashboard',
+        key: 'home',
+      });
+    }
+    
+    // Add path segments
+    let currentPath = '';
+    for (let i = 0; i < uniqueSegments.length; i++) {
+      const segment = uniqueSegments[i];
+      currentPath += `/${segment}`;
+      
+      let label = segment
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+      
+      if (segment === 'client') label = 'Client Portal';
+      if (segment === 'admin') label = 'Admin Panel';
+      if (segment === 'driver') label = 'Driver Portal';
+      
+      crumbs.push({
+        label,
+        href: currentPath,
+        key: currentPath,
+      });
+    }
+    
+    return crumbs;
   };
 
   const roleIcon = isClient
@@ -90,13 +111,10 @@ export default function UnifiedHeader({
     ? Shield
     : User;
 
-  /* ================= Render ================= */
-
   return (
     <>
-      {/* Header */}
       <header
-        className="fixed top-0 z-30 bg-white border-b border-gray-200 shadow-sm transition-all duration-300"
+        className="fixed top-0 z-30 bg-white border-b border-maroon-100 shadow-sm transition-all duration-300"
         style={{
           left: sidebarWidth,
           width: `calc(100% - ${sidebarWidth}px)`,
@@ -107,37 +125,39 @@ export default function UnifiedHeader({
           <div className="flex items-start gap-3">
             <button
               onClick={onMenuClick}
-              className="lg:hidden mt-1 rounded-lg p-2 text-gray-700 hover:bg-gray-100"
+              className="lg:hidden mt-1 rounded-lg p-2 text-maroon-600 hover:bg-maroon-50 transition-colors"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Title + Breadcrumb */}
             <div className="flex flex-col">
-              <h1 className="text-lg font-semibold text-gray-900 leading-tight">
-                {getTitle()}
-              </h1>
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5 text-maroon-600" />
+                <h1 className="text-lg font-semibold bg-gradient-to-r from-maroon-600 to-maroon-800 bg-clip-text text-transparent leading-tight">
+                  {getTitle()}
+                </h1>
+              </div>
 
-              {/* Breadcrumb */}
+              {/* Breadcrumb with unique keys */}
               <nav className="hidden sm:flex items-center gap-1 text-xs text-gray-500 mt-0.5">
                 {getBreadcrumbs().map((crumb, index, arr) => (
-                  <span key={crumb.href} className="flex items-center gap-1">
+                  <div key={crumb.key} className="flex items-center gap-1">
                     {index > 0 && (
                       <span className="text-gray-400">/</span>
                     )}
                     {index === arr.length - 1 ? (
-                      <span className="font-medium text-gray-700">
+                      <span className="font-medium text-maroon-700">
                         {crumb.label}
                       </span>
                     ) : (
                       <Link
                         href={crumb.href}
-                        className="hover:text-gray-700 transition-colors"
+                        className="hover:text-maroon-600 transition-colors"
                       >
                         {crumb.label}
                       </Link>
                     )}
-                  </span>
+                  </div>
                 ))}
               </nav>
             </div>
@@ -149,56 +169,61 @@ export default function UnifiedHeader({
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setOpen(o => !o)}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-maroon-50 transition-colors"
                 >
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white flex items-center justify-center text-sm font-semibold">
+                  <div className="h-8 w-8 rounded-full bg-gradient-maroon text-white flex items-center justify-center text-sm font-semibold shadow-sm">
                     {user?.firstName?.[0]}
                     {user?.lastName?.[0]}
                   </div>
                   <ChevronDown
-                    className={`h-4 w-4 text-gray-500 transition-transform ${
+                    className={`h-4 w-4 text-maroon-500 transition-transform ${
                       open ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
 
                 {open && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden z-50">
-                    <div className="px-4 py-3 border-b bg-gray-50">
-                      <p className="text-sm font-semibold truncate">
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-lg ring-1 ring-maroon-100 overflow-hidden z-50">
+                    <div className="px-4 py-3 border-b bg-gradient-to-r from-maroon-50 to-transparent">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
                         {user?.firstName} {user?.lastName}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
                         {user?.email}
                       </p>
+                      <div className="mt-1.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-maroon-100 text-maroon-700">
+                          {isClient ? 'CLIENT' : isDriver ? 'DRIVER' : isAdmin ? 'ADMIN' : 'USER'}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="py-2">
                       <Link
                         href="/profile"
                         onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-maroon-50 transition-colors"
                       >
-                        <User className="h-4 w-4 text-gray-400" />
+                        <User className="h-4 w-4 text-maroon-500" />
                         Profile
                       </Link>
                       <Link
                         href="/settings"
                         onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-maroon-50 transition-colors"
                       >
-                        <Settings className="h-4 w-4 text-gray-400" />
+                        <Settings className="h-4 w-4 text-maroon-500" />
                         Settings
                       </Link>
                     </div>
 
-                    <div className="border-t">
+                    <div className="border-t border-maroon-100">
                       <button
                         onClick={() => {
                           setOpen(false);
                           logout();
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <LogOut className="h-4 w-4" />
                         Logout
@@ -210,7 +235,7 @@ export default function UnifiedHeader({
             ) : (
               <Link
                 href="/auth/login"
-                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg text-sm font-medium"
+                className="px-4 py-2 bg-gradient-maroon text-white rounded-lg text-sm font-medium hover:shadow-md transition-all duration-300"
               >
                 Sign In
               </Link>
@@ -226,8 +251,7 @@ export default function UnifiedHeader({
           left: sidebarWidth,
           width: `calc(100% - ${sidebarWidth}px)`,
           height: '3px',
-          background:
-            'linear-gradient(90deg, #f97316, #facc15, #f97316)',
+          background: 'linear-gradient(90deg, #c41e3a, #eab308, #c41e3a)',
         }}
       />
 
